@@ -68,7 +68,7 @@ function MapDashboard() {
   useEffect(() => {
     if (!profile) return;
     const tick = setInterval(async () => {
-      setProgress((p) => Math.min(100, p + 1));
+      setCurrentRegionXp((x) => Math.min(REGION_GATE_THRESHOLD, x + 1));
       const id = getStoredProfileId();
       if (!id) return;
       const { data } = await supabase
