@@ -360,30 +360,7 @@ function MapViewport({
         })}
       </div>
 
-      {/* Soaring birds (silhouettes) */}
-      <div aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden">
-        {Array.from({ length: 3 }).map((_, i) => {
-          const top = 8 + i * 18;
-          const dur = 18 + i * 6;
-          const delay = -i * 8;
-          return (
-            <span
-              key={i}
-              className="absolute text-2xl"
-              style={{
-                top: `${top}%`, left: 0,
-                opacity: 0.6,
-                filter: "drop-shadow(0 1px 0 rgba(0,0,0,0.6))",
-                animation: `bird-fly ${dur}s linear ${delay}s infinite`,
-              }}
-            >
-              <span className="inline-block" style={{ animation: "bird-flap 0.5s ease-in-out infinite" }}>
-                🦅
-              </span>
-            </span>
-          );
-        })}
-      </div>
+
 
       {/* Existing sparkle motes */}
       <span className="absolute top-[20%] left-[15%] text-tertiary animate-twinkle"><Sparkles className="w-3 h-3" /></span>
