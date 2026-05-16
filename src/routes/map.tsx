@@ -223,9 +223,11 @@ function MapDashboard() {
           onClose={() => setActiveLocation(null)}
           profileId={profile.id}
           progress={progress}
-          onStartTrack={(track, input) =>
-            setActiveTrack({ track, location: LOCATIONS[activeLocation].name, input })
-          }
+          onStartTrack={(track, input) => {
+            setActiveLocation(null);
+            navigate({ to: "/quest" });
+            void track; void input;
+          }}
         />
       )}
 
