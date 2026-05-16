@@ -232,18 +232,22 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
             The innkeeper sets down a steaming bowl. "Try it, traveler — and tell me, how does one say <em className="text-tertiary">'delicious'</em> in your tongue?"
           </h2>
 
-          <div className="grid gap-3">
-            {["Délicieux", "Effrayant", "Ennuyeux", "Coûteux"].map((opt, i) => (
-              <button
-                key={i}
-                disabled={isLockedOut}
-                className="text-left px-4 py-3 rounded border-2 border-black bg-[#2a2a22] hover:bg-[#34342a] hover:-translate-y-0.5 transition-transform font-serif text-base shadow-hard disabled:opacity-50"
-              >
-                <span className="font-mono-label text-[10px] text-tertiary mr-2">{String.fromCharCode(65 + i)}.</span>
-                {opt}
-              </button>
-            ))}
-          </div>
+          {track === "speaking" ? (
+            <SpeakingMicBar disabled={isLockedOut || victory} />
+          ) : (
+            <div className="grid gap-3">
+              {["Délicieux", "Effrayant", "Ennuyeux", "Coûteux"].map((opt, i) => (
+                <button
+                  key={i}
+                  disabled={isLockedOut}
+                  className="text-left px-4 py-3 rounded border-2 border-black bg-[#2a2a22] hover:bg-[#34342a] hover:-translate-y-0.5 transition-transform font-serif text-base shadow-hard disabled:opacity-50"
+                >
+                  <span className="font-mono-label text-[10px] text-tertiary mr-2">{String.fromCharCode(65 + i)}.</span>
+                  {opt}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* === Cheat toolbar === */}
