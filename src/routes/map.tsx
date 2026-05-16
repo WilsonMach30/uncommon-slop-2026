@@ -8,7 +8,13 @@ import {
 import { loadProfile, getStoredProfileId } from "@/lib/profile";
 import { supabase } from "@/integrations/supabase/client";
 import QuestPanel from "@/components/QuestPanel";
+import DialogueBox from "@/components/DialogueBox";
+import { useSessionTracker } from "@/hooks/use-session-tracker";
+import { toast } from "sonner";
 import forestMap from "@/assets/forest-map.jpg";
+
+// Global proficiency XP for the current region (Feature 4)
+const REGION_GATE_THRESHOLD = 50;
 
 export const Route = createFileRoute("/map")({
   component: MapDashboard,
