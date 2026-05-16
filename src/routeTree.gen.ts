@@ -9,10 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as QuestRouteImport } from './routes/quest'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiGenerateTurnRouteImport } from './routes/api/generate-turn'
 
+const QuestRoute = QuestRouteImport.update({
+  id: '/quest',
+  path: '/quest',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MapRoute = MapRouteImport.update({
   id: '/map',
   path: '/map',
@@ -32,35 +38,46 @@ const ApiGenerateTurnRoute = ApiGenerateTurnRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/map': typeof MapRoute
+  '/quest': typeof QuestRoute
   '/api/generate-turn': typeof ApiGenerateTurnRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/map': typeof MapRoute
+  '/quest': typeof QuestRoute
   '/api/generate-turn': typeof ApiGenerateTurnRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/map': typeof MapRoute
+  '/quest': typeof QuestRoute
   '/api/generate-turn': typeof ApiGenerateTurnRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/map' | '/api/generate-turn'
+  fullPaths: '/' | '/map' | '/quest' | '/api/generate-turn'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/map' | '/api/generate-turn'
-  id: '__root__' | '/' | '/map' | '/api/generate-turn'
+  to: '/' | '/map' | '/quest' | '/api/generate-turn'
+  id: '__root__' | '/' | '/map' | '/quest' | '/api/generate-turn'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   MapRoute: typeof MapRoute
+  QuestRoute: typeof QuestRoute
   ApiGenerateTurnRoute: typeof ApiGenerateTurnRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/quest': {
+      id: '/quest'
+      path: '/quest'
+      fullPath: '/quest'
+      preLoaderRoute: typeof QuestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/map': {
       id: '/map'
       path: '/map'
@@ -88,8 +105,19 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   MapRoute: MapRoute,
+  QuestRoute: QuestRoute,
   ApiGenerateTurnRoute: ApiGenerateTurnRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
