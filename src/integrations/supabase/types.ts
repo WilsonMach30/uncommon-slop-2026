@@ -103,6 +103,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_engagement: {
+        Row: {
+          active_minutes: number
+          created_at: string
+          daily_progress_percentage: number
+          id: string
+          session_start: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active_minutes?: number
+          created_at?: string
+          daily_progress_percentage?: number
+          id?: string
+          session_start?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active_minutes?: number
+          created_at?: string
+          daily_progress_percentage?: number
+          id?: string
+          session_start?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

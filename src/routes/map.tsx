@@ -8,7 +8,13 @@ import {
 import { loadProfile, getStoredProfileId } from "@/lib/profile";
 import { supabase } from "@/integrations/supabase/client";
 import QuestPanel from "@/components/QuestPanel";
+import DialogueBox from "@/components/DialogueBox";
+import { useSessionTracker } from "@/hooks/use-session-tracker";
+import { toast } from "sonner";
 import forestMap from "@/assets/forest-map.jpg";
+
+// Global proficiency XP for the current region (Feature 4)
+const REGION_GATE_THRESHOLD = 50;
 
 export const Route = createFileRoute("/map")({
   component: MapDashboard,
@@ -42,20 +48,27 @@ function MapDashboard() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeLocation, setActiveLocation] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
   const [gateModal, setGateModal] = useState(false);
+  const [activeTrack, setActiveTrack] = useState<{ track: string; location: string; input: string } | null>(null);
+  const [currentRegionXp, setCurrentRegionXp] = useState(4);
+
+  // Feature 2: tracks active session time and pushes to user_engagement every 60s
+  const { progress, setProgress } = useSessionTracker(profile?.id ?? null);
 
   useEffect(() => {
     loadProfile().then((p) => {
       if (!p) navigate({ to: "/" });
-      else setProfile(p as Profile);
+      else {
+        setProfile(p as Profile);
+        setCurrentRegionXp((p as Profile).proficiency_score ?? 4);
+      }
     });
   }, [navigate]);
 
   useEffect(() => {
     if (!profile) return;
     const tick = setInterval(async () => {
-      setProgress((p) => Math.min(100, p + 1));
+      setCurrentRegionXp((x) => Math.min(REGION_GATE_THRESHOLD, x + 1));
       const id = getStoredProfileId();
       if (!id) return;
       const { data } = await supabase
@@ -86,7 +99,15 @@ function MapDashboard() {
   }
 
   const region = REGION_NAMES[(profile.current_region - 1) % REGION_NAMES.length];
-  const gateUnlocked = profile.proficiency_score >= 50;
+  const gateUnlocked = currentRegionXp >= REGION_GATE_THRESHOLD;
+
+  const handleGateClick = () => {
+    if (!gateUnlocked) {
+      toast.error("You must log more exploration hours in this region before challenging the Gatekeeper!");
+      return;
+    }
+    setGateModal(true);
+  };
   const locations = profile.interests.filter((i) => LOCATIONS[i]).slice(0, 4);
   const manaPct = Math.min(100, Math.round(((profile.map_energy ?? 0) / 100) * 100));
 
@@ -165,11 +186,11 @@ function MapDashboard() {
 
           {/* Region Exam Gate (top right) */}
           <button
-            onClick={() => setGateModal(true)}
-            className="absolute top-16 right-4 sm:top-20 sm:right-8 group"
+            onClick={handleGateClick}
+            className="absolute top-16 right-4 sm:top-20 sm:right-8 group transition-transform hover:scale-105"
           >
-            <div className={`panel-bark border-2 rounded-md px-3 py-2 flex items-center gap-2 ${
-              gateUnlocked ? "border-tertiary glow-gold" : "border-bark opacity-90"
+            <div className={`panel-bark border-2 rounded-md px-3 py-2 flex items-center gap-2 transition-all ${
+              gateUnlocked ? "border-tertiary glow-gold animate-pulse" : "border-bark opacity-90"
             }`}>
               <div className={`w-8 h-8 rounded flex items-center justify-center ${
                 gateUnlocked ? "bg-tertiary text-tertiary-foreground" : "bg-surface-low text-muted-foreground"
@@ -178,7 +199,9 @@ function MapDashboard() {
               </div>
               <div className="text-left leading-tight">
                 <p className="font-mono-label text-[9px] uppercase tracking-widest text-tertiary">Region Gate</p>
-                <p className="font-serif text-xs text-cream">{gateUnlocked ? "Ready" : `${profile.proficiency_score}/50`}</p>
+                <p className="font-serif text-xs text-cream">
+                  {gateUnlocked ? "Challenge Ready" : `${currentRegionXp}/${REGION_GATE_THRESHOLD}`}
+                </p>
               </div>
             </div>
           </button>
@@ -239,36 +262,62 @@ function MapDashboard() {
           onClose={() => setActiveLocation(null)}
           profileId={profile.id}
           progress={progress}
+          onStartTrack={(track, input) =>
+            setActiveTrack({ track, location: LOCATIONS[activeLocation].name, input })
+          }
         />
       )}
 
+      {activeTrack && (
+        <DialogueBox
+          track={activeTrack.track}
+          location={activeTrack.location}
+          userInput={activeTrack.input}
+          onClose={() => setActiveTrack(null)}
+        />
+      )}
+
+      {/* Fullscreen Regional Proficiency Challenge (Feature 4) */}
       {gateModal && (
-        <Modal onClose={() => setGateModal(false)}>
-          <p className="font-mono-label text-[10px] uppercase tracking-[0.35em] text-tertiary mb-2 text-center">
-            ⟢ Regional Trial ⟣
-          </p>
-          <h2 className="font-serif text-2xl text-center mb-3">Proficiency Challenge</h2>
-          <p className="text-muted-foreground text-sm text-center mb-6">
-            Are you ready to attempt the challenge to unlock the next territory?
-            Your hidden proficiency is{" "}
-            <span className="text-tertiary font-mono-label">{profile.proficiency_score}/50</span>.
-          </p>
-          <div className="flex gap-3 justify-center">
+        <div
+          className="fixed inset-0 z-[70] bg-black/95 backdrop-blur-md flex items-center justify-center p-6"
+          onClick={() => setGateModal(false)}
+        >
+          <div
+            className="panel-bark border-4 border-tertiary rounded-2xl shadow-panel glow-gold w-full h-full max-w-5xl max-h-[90vh] flex flex-col items-center justify-center p-8 text-center relative overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setGateModal(false)}
-              className="px-5 py-2.5 panel-bark border-2 border-bark rounded-full font-mono-label text-xs uppercase tracking-widest text-muted-foreground hover:border-tertiary/40"
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-surface-low text-muted-foreground"
             >
-              Not yet
+              ✕
             </button>
-            <button
-              disabled={!gateUnlocked}
-              onClick={() => setGateModal(false)}
-              className="px-5 py-2.5 bg-tertiary text-tertiary-foreground rounded-full font-serif border-2 border-tertiary-container glow-gold disabled:opacity-40 disabled:glow-gold"
-            >
-              {gateUnlocked ? "Enter the Gate" : "Locked"}
-            </button>
+            <p className="font-mono-label text-xs uppercase tracking-[0.5em] text-tertiary mb-4 animate-pulse">
+              ⟢ The Gatekeeper Awaits ⟣
+            </p>
+            <h2 className="font-serif text-4xl sm:text-6xl mb-6 text-cream">
+              Regional Proficiency<br/><span className="text-tertiary">Challenge</span>
+            </h2>
+            <p className="text-muted-foreground text-base max-w-xl mb-8 font-serif italic">
+              You have proven your dedication to {region}. Step forward and face the trial that will unlock the next territory.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setGateModal(false)}
+                className="px-6 py-3 panel-bark border-2 border-bark rounded-full font-mono-label text-xs uppercase tracking-widest text-muted-foreground hover:border-tertiary/40"
+              >
+                Retreat
+              </button>
+              <button
+                onClick={() => setGateModal(false)}
+                className="px-8 py-3 bg-tertiary text-tertiary-foreground rounded-full font-serif text-lg border-2 border-tertiary-container glow-gold"
+              >
+                Begin the Trial
+              </button>
+            </div>
           </div>
-        </Modal>
+        </div>
       )}
     </div>
   );
