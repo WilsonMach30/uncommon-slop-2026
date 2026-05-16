@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Heart, Check, X, Trophy, ArrowLeft } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Heart, Check, X, Trophy, ArrowLeft, Flame, Sparkles, Star } from "lucide-react";
 
 const TOTAL_STEPS = 5;
 const LOCKOUT_SECONDS = 30;
