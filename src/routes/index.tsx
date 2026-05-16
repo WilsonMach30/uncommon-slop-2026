@@ -2,6 +2,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { UtensilsCrossed, Plane, Sparkles, Home, ScrollText, Loader2, Footprints } from "lucide-react";
 import { createProfile, loadProfile } from "@/lib/profile";
+import {
+  savePassions,
+  saveTargetLanguage,
+  syncProfileHistoryOnboarding,
+} from "@/lib/user-profile-history";
 import portal from "@/assets/forest-portal.jpg";
 
 export const Route = createFileRoute("/")({
@@ -39,14 +44,25 @@ function Onboarding() {
     });
   }, [navigate]);
 
-  const toggle = (id: string) =>
-    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  const selectLanguage = (code: string) => {
+    setLanguage(code);
+    void saveTargetLanguage(code);
+  };
+
+  const toggle = (id: string) => {
+    setSelected((s) => {
+      const next = s.includes(id) ? s.filter((x) => x !== id) : [...s, id];
+      void savePassions(next);
+      return next;
+    });
+  };
 
   const begin = async () => {
     if (selected.length === 0) return;
     setSubmitting(true);
     try {
       await createProfile(language, selected);
+      await syncProfileHistoryOnboarding(language, selected);
       navigate({ to: "/map" });
     } finally {
       setSubmitting(false);
@@ -93,7 +109,7 @@ function Onboarding() {
               return (
                 <button
                   key={l.code}
-                  onClick={() => setLanguage(l.code)}
+                  onClick={() => selectLanguage(l.code)}
                   className={`p-3 rounded-md text-center transition-all border-2 ${
                     active
                       ? "bg-tertiary-container border-tertiary glow-gold"

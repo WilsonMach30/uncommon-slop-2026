@@ -14,6 +14,7 @@ import LoreView from "@/components/views/LoreView";
 import ArmoryView from "@/components/views/ArmoryView";
 import MeView from "@/components/views/MeView";
 import { useSessionTracker } from "@/hooks/use-session-tracker";
+import { saveProfileHistoryLevel } from "@/lib/user-profile-history";
 import { toast } from "sonner";
 import forestMap from "@/assets/forest-map.jpg";
 
@@ -77,6 +78,11 @@ function MapDashboard() {
       }
     });
   }, [navigate]);
+
+  useEffect(() => {
+    if (profile?.exploration_level == null) return;
+    void saveProfileHistoryLevel(profile.exploration_level);
+  }, [profile?.exploration_level]);
 
   useEffect(() => {
     if (!profile) return;

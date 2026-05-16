@@ -8,6 +8,15 @@ export type TrialImageRow = {
   created_at: string;
 };
 
+export type TrialUserProfileHistoryRow = {
+  id: number;
+  target_language: string;
+  passion: string;
+  level: number;
+  interests: string | null;
+  common_mistakes: string | null;
+};
+
 function createTrialSupabaseClient(): SupabaseClient {
   const url = import.meta.env.VITE_TRIAL_SUPABASE_URL;
   const key = import.meta.env.VITE_TRIAL_SUPABASE_PUBLISHABLE_KEY;
