@@ -232,9 +232,10 @@ function MapDashboard() {
           profileId={profile.id}
           progress={progress}
           onStartTrack={(track, input) => {
+            const loc = activeLocation ? LOCATIONS[activeLocation]?.name ?? activeLocation : "the tavern";
             setActiveLocation(null);
-            navigate({ to: "/quest" });
-            void track; void input;
+            navigate({ to: "/quest", search: { track, location: loc } });
+            void input;
           }}
         />
       )}
