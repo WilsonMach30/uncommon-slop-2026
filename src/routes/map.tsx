@@ -262,36 +262,62 @@ function MapDashboard() {
           onClose={() => setActiveLocation(null)}
           profileId={profile.id}
           progress={progress}
+          onStartTrack={(track, input) =>
+            setActiveTrack({ track, location: LOCATIONS[activeLocation].name, input })
+          }
         />
       )}
 
+      {activeTrack && (
+        <DialogueBox
+          track={activeTrack.track}
+          location={activeTrack.location}
+          userInput={activeTrack.input}
+          onClose={() => setActiveTrack(null)}
+        />
+      )}
+
+      {/* Fullscreen Regional Proficiency Challenge (Feature 4) */}
       {gateModal && (
-        <Modal onClose={() => setGateModal(false)}>
-          <p className="font-mono-label text-[10px] uppercase tracking-[0.35em] text-tertiary mb-2 text-center">
-            ⟢ Regional Trial ⟣
-          </p>
-          <h2 className="font-serif text-2xl text-center mb-3">Proficiency Challenge</h2>
-          <p className="text-muted-foreground text-sm text-center mb-6">
-            Are you ready to attempt the challenge to unlock the next territory?
-            Your hidden proficiency is{" "}
-            <span className="text-tertiary font-mono-label">{profile.proficiency_score}/50</span>.
-          </p>
-          <div className="flex gap-3 justify-center">
+        <div
+          className="fixed inset-0 z-[70] bg-black/95 backdrop-blur-md flex items-center justify-center p-6"
+          onClick={() => setGateModal(false)}
+        >
+          <div
+            className="panel-bark border-4 border-tertiary rounded-2xl shadow-panel glow-gold w-full h-full max-w-5xl max-h-[90vh] flex flex-col items-center justify-center p-8 text-center relative overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setGateModal(false)}
-              className="px-5 py-2.5 panel-bark border-2 border-bark rounded-full font-mono-label text-xs uppercase tracking-widest text-muted-foreground hover:border-tertiary/40"
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-surface-low text-muted-foreground"
             >
-              Not yet
+              ✕
             </button>
-            <button
-              disabled={!gateUnlocked}
-              onClick={() => setGateModal(false)}
-              className="px-5 py-2.5 bg-tertiary text-tertiary-foreground rounded-full font-serif border-2 border-tertiary-container glow-gold disabled:opacity-40 disabled:glow-gold"
-            >
-              {gateUnlocked ? "Enter the Gate" : "Locked"}
-            </button>
+            <p className="font-mono-label text-xs uppercase tracking-[0.5em] text-tertiary mb-4 animate-pulse">
+              ⟢ The Gatekeeper Awaits ⟣
+            </p>
+            <h2 className="font-serif text-4xl sm:text-6xl mb-6 text-cream">
+              Regional Proficiency<br/><span className="text-tertiary">Challenge</span>
+            </h2>
+            <p className="text-muted-foreground text-base max-w-xl mb-8 font-serif italic">
+              You have proven your dedication to {region}. Step forward and face the trial that will unlock the next territory.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setGateModal(false)}
+                className="px-6 py-3 panel-bark border-2 border-bark rounded-full font-mono-label text-xs uppercase tracking-widest text-muted-foreground hover:border-tertiary/40"
+              >
+                Retreat
+              </button>
+              <button
+                onClick={() => setGateModal(false)}
+                className="px-8 py-3 bg-tertiary text-tertiary-foreground rounded-full font-serif text-lg border-2 border-tertiary-container glow-gold"
+              >
+                Begin the Trial
+              </button>
+            </div>
           </div>
-        </Modal>
+        </div>
       )}
     </div>
   );
