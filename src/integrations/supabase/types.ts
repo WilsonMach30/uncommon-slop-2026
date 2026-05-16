@@ -14,7 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      engagement_logs: {
+        Row: {
+          created_at: string
+          duration_seconds: number
+          event_type: string
+          id: string
+          location_name: string | null
+          profile_id: string
+          session_input: string | null
+          track: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number
+          event_type: string
+          id?: string
+          location_name?: string | null
+          profile_id: string
+          session_input?: string | null
+          track?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number
+          event_type?: string
+          id?: string
+          location_name?: string | null
+          profile_id?: string
+          session_input?: string | null
+          track?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engagement_logs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          current_region: number
+          device_id: string
+          display_name: string | null
+          exploration_level: number
+          gold_tokens: number
+          id: string
+          interests: string[]
+          language: string
+          map_energy: number
+          proficiency_score: number
+          streak_days: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_region?: number
+          device_id: string
+          display_name?: string | null
+          exploration_level?: number
+          gold_tokens?: number
+          id?: string
+          interests?: string[]
+          language?: string
+          map_energy?: number
+          proficiency_score?: number
+          streak_days?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_region?: number
+          device_id?: string
+          display_name?: string | null
+          exploration_level?: number
+          gold_tokens?: number
+          id?: string
+          interests?: string[]
+          language?: string
+          map_energy?: number
+          proficiency_score?: number
+          streak_days?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
