@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { X, Volume2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { X, Volume2, Mic, MicOff, Loader2 } from "lucide-react";
 
 type Turn = {
   speaker: string;
@@ -16,6 +16,11 @@ export default function DialogueBox({
   const [turn, setTurn] = useState<Turn | null>(null);
   const [loading, setLoading] = useState(true);
   const [typed, setTyped] = useState("");
+  const [recording, setRecording] = useState(false);
+  const [responding, setResponding] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const responseAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,12 +49,53 @@ export default function DialogueBox({
     return () => clearInterval(id);
   }, [turn]);
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      chunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const form = new FormData();
+        form.append("audio", blob, "recording.webm");
+        setResponding(true);
+        try {
+          const res = await fetch("http://127.0.0.1:5000/respond-to-voice", { method: "POST", body: form });
+          if (!res.ok) throw new Error(await res.text());
+          const audioBlob = await res.blob();
+          const url = URL.createObjectURL(audioBlob);
+          if (responseAudioRef.current) {
+            responseAudioRef.current.src = url;
+            responseAudioRef.current.play();
+          }
+        } catch (err) {
+          console.error("Voice pipeline error:", err);
+        } finally {
+          setResponding(false);
+        }
+      };
+      mr.start();
+      mediaRecorderRef.current = mr;
+      setRecording(true);
+    } catch {
+      console.error("Microphone access denied");
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+    setRecording(false);
+  };
+
   const isSpeaking = track === "speaking";
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-3 sm:p-6" onClick={onClose}>
       <div
-        className="panel-bark border-2 border-tertiary rounded-xl shadow-panel w-full max-w-2xl glow-gold animate-in slide-in-from-bottom-8 duration-300"
+        className="panel-bark border-2 border-tertiary rounded-xl shadow-panel w-full max-w-2xl glow-gold animate-in slide-in-from-bottom-8 duration-300 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -97,6 +143,36 @@ export default function DialogueBox({
               <span className="inline-block w-2 h-4 ml-0.5 bg-tertiary align-middle animate-pulse" />
             </p>
           </div>
+        </div>
+
+        {/* Voice record button */}
+        <div className="px-5 pb-4 flex flex-col items-center gap-2">
+          <button
+            onMouseDown={startRecording}
+            onMouseUp={stopRecording}
+            onTouchStart={startRecording}
+            onTouchEnd={stopRecording}
+            disabled={responding}
+            className={`w-16 h-16 rounded-full border-4 flex items-center justify-center transition-all select-none ${
+              recording
+                ? "bg-red-600 border-red-400 scale-110 animate-pulse"
+                : responding
+                ? "bg-surface-low border-bark cursor-not-allowed"
+                : "bg-tertiary border-tertiary-container glow-gold hover:scale-105 active:scale-95"
+            }`}
+          >
+            {responding ? (
+              <Loader2 className="w-7 h-7 animate-spin text-cream" />
+            ) : recording ? (
+              <MicOff className="w-7 h-7 text-white" />
+            ) : (
+              <Mic className="w-7 h-7 text-tertiary-foreground" />
+            )}
+          </button>
+          <p className="font-mono-label text-[10px] uppercase tracking-widest text-muted-foreground">
+            {responding ? "Thinking…" : recording ? "Release to send" : "Hold to speak"}
+          </p>
+          <audio ref={responseAudioRef} hidden />
         </div>
 
         {/* Choices */}
