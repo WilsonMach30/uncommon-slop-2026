@@ -103,6 +103,30 @@ export type Database = {
         }
         Relationships: []
       }
+      unlocked_cosmetics: {
+        Row: {
+          id: string
+          item_key: string
+          profile_id: string
+          slot: string
+          unlocked_at: string
+        }
+        Insert: {
+          id?: string
+          item_key: string
+          profile_id: string
+          slot: string
+          unlocked_at?: string
+        }
+        Update: {
+          id?: string
+          item_key?: string
+          profile_id?: string
+          slot?: string
+          unlocked_at?: string
+        }
+        Relationships: []
+      }
       user_engagement: {
         Row: {
           active_minutes: number
@@ -130,6 +154,42 @@ export type Database = {
           session_start?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_quests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          kind: string
+          location: string | null
+          profile_id: string
+          progress: number
+          target: number
+          title: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          location?: string | null
+          profile_id: string
+          progress?: number
+          target?: number
+          title: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          location?: string | null
+          profile_id?: string
+          progress?: number
+          target?: number
+          title?: string
         }
         Relationships: []
       }
