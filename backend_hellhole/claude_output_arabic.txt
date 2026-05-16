@@ -1,0 +1,19 @@
+**Conversation Blueprint for Wafer AI**
+
+**1. Image Analysis:**
+The image shows a Chinese takeout meal from Panda Express in a white styrofoam container. The meal includes orange chicken (glazed chicken pieces), beef and broccoli, fried rice with vegetables, and lo mein noodles. There's also a red Panda Express drink cup and a fortune cookie package visible.
+
+**2. Target Vocabulary (Arabic):**
+- **دجاج** (dajaj) - chicken
+- **أرز مقلي** (aruzz muqalla) - fried rice  
+- **بروكلي** (broccoli) - broccoli
+
+**3. Primary Grammatical Focus:**
+Location expressions using prepositions - practice distinguishing between **في** (fi - in/at) for being inside/at a place vs **على** (ala - on) for being on top of something. This builds on David's past struggles with location concepts and will help with describing where food items are positioned in the container.
+
+**4. Conversational Opening Question:**
+**أرى أنك طلبت طعاماً صينياً اليوم! أين تفضل أن تأكل عادة - في المطعم أم في البيت؟**
+
+*(Translation: I see you ordered Chinese food today! Where do you usually prefer to eat - in the restaurant or at home?)*
+
+**Additional Notes for Wafer AI:** Guide David to describe the meal's components and their locations in the container, then naturally transition to comparing this meal with his previous coffee ordering experience to reinforce practical vocabulary usage.

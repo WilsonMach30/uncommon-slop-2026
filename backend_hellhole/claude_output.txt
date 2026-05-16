@@ -1,0 +1,22 @@
+## Conversation Blueprint for Wafer AI
+
+### 1. Image Analysis
+The image shows a takeout meal from Panda Express Chinese restaurant featuring orange chicken, beef and broccoli, fried rice with mixed vegetables, lo mein noodles, served with a red drink cup and fortune cookie. The meal is presented in a white styrofoam container on a wooden slatted surface.
+
+### 2. Target Vocabulary (3 words)
+- **pollo agridulce** (sweet and sour chicken/orange chicken)
+- **fideos** (noodles) 
+- **brócoli** (broccoli)
+
+### 3. Primary Grammatical Focus
+**Ser vs. Estar usage** - Since David confuses these verbs when talking about locations, practice should focus on:
+- "La comida está en el recipiente" (food IS LOCATED in the container)
+- "El restaurante está cerca de mi casa" (restaurant IS LOCATED near my house)
+- vs. "Panda Express es un restaurante chino" (Panda Express IS a Chinese restaurant - permanent characteristic)
+
+### 4. Conversational Opening Question
+**"¡Qué rico se ve tu cena! ¿Dónde está ese restaurante Panda Express? ¿Está cerca de tu casa o tuviste que ir lejos para conseguir esta comida china?"**
+
+*Translation: "How delicious your dinner looks! Where is that Panda Express restaurant? Is it close to your house or did you have to go far to get this Chinese food?"*
+
+This opening naturally incorporates the ser/estar practice while building on his food-ordering experience and creates opportunity to discuss the specific dishes shown.
