@@ -314,12 +314,12 @@ function MapViewport({
 
       {/* Fireflies */}
       <div aria-hidden className="absolute inset-0 pointer-events-none">
-        {Array.from({ length: 14 }).map((_, i) => {
-          const left = (i * 73) % 100;
-          const top = (i * 41 + 13) % 90;
-          const dur = 6 + ((i * 1.7) % 7);
-          const delay = (i * 0.6) % 5;
-          const size = 4 + (i % 4);
+        {Array.from({ length: 32 }).map((_, i) => {
+          const left = (i * 37) % 100;
+          const top = (i * 53 + 7) % 95;
+          const dur = 5 + ((i * 1.3) % 9);
+          const delay = (i * 0.4) % 6;
+          const size = 3 + (i % 5);
           return (
             <span
               key={i}
@@ -332,30 +332,6 @@ function MapViewport({
                 animation: `firefly ${dur}s ease-in-out ${delay}s infinite`,
               }}
             />
-          );
-        })}
-      </div>
-
-      {/* Falling leaves */}
-      <div aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden">
-        {Array.from({ length: 7 }).map((_, i) => {
-          const left = (i * 17 + 5) % 95;
-          const dur = 10 + ((i * 2.1) % 8);
-          const delay = (i * 1.7) % 9;
-          const emoji = ["🍂", "🍃", "🌿"][i % 3];
-          return (
-            <span
-              key={i}
-              className="absolute top-0 text-xl"
-              style={{
-                left: `${left}%`,
-                animation: `leaf-fall ${dur}s linear ${delay}s infinite`,
-                opacity: 0.7,
-                filter: "drop-shadow(0 0 4px rgba(0,0,0,0.4))",
-              }}
-            >
-              {emoji}
-            </span>
           );
         })}
       </div>
