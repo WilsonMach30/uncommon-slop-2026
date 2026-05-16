@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { Heart, Check, X, Trophy, ArrowLeft, Flame, Sparkles, Star } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Heart, Check, X, Trophy, ArrowLeft, Flame, Sparkles, Star, Mic, MicOff, Loader2 } from "lucide-react";
 
 const TOTAL_STEPS = 5;
 const LOCKOUT_SECONDS = 30;
 
-export default function QuestRunner({ onExit }: { onExit?: () => void }) {
+export default function QuestRunner({ onExit, track = "speaking", location = "the tavern" }: { onExit?: () => void; track?: string; location?: string }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [lives, setLives] = useState(3);
   const [isLockedOut, setIsLockedOut] = useState(false);
