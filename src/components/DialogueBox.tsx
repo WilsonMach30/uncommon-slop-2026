@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Volume2, Mic, MicOff, Loader2 } from "lucide-react";
+import { X, Mic, MicOff, Loader2 } from "lucide-react";
 
 type Turn = {
   speaker: string;
