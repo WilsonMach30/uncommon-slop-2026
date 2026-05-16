@@ -2,11 +2,13 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   UtensilsCrossed, Plane, Sparkles, Home, ScrollText,
-  Flame, Coins, Zap, Lock, ShieldCheck, Loader2, Compass,
+  Flame, Coins, Zap, Lock, ShieldCheck, Loader2,
+  Compass, Map as MapIcon, ScrollText as Scroll, BookOpen, User,
 } from "lucide-react";
 import { loadProfile, getStoredProfileId } from "@/lib/profile";
 import { supabase } from "@/integrations/supabase/client";
 import QuestPanel from "@/components/QuestPanel";
+import forestMap from "@/assets/forest-map.jpg";
 
 export const Route = createFileRoute("/map")({
   component: MapDashboard,
@@ -24,12 +26,14 @@ type Profile = {
   streak_days: number;
 };
 
-const LOCATIONS: Record<string, { name: string; subtitle: string; icon: any; tagline: string }> = {
-  food: { name: "Local Tavern", subtitle: "Brasserie of the Shire", icon: UtensilsCrossed, tagline: "Order, taste, gossip." },
-  travel: { name: "Wayfarer's Crossroads", subtitle: "Carriage Stop", icon: Plane, tagline: "Maps, fares, weather." },
-  culture: { name: "Bard's Hollow", subtitle: "Folk Stage", icon: Sparkles, tagline: "Songs, dances, riddles." },
-  daily: { name: "Cobbled Square", subtitle: "Market & Workshop", icon: Home, tagline: "Errands, neighbors, time." },
-  history: { name: "Ancient Ruins", subtitle: "Crumbling Museum", icon: ScrollText, tagline: "Dynasties, relics, lore." },
+type LocSpec = { name: string; subtitle: string; icon: any; tagline: string; pos: { top: string; left: string } };
+
+const LOCATIONS: Record<string, LocSpec> = {
+  food:    { name: "The Brasserie",       subtitle: "Local Tavern",      icon: UtensilsCrossed, tagline: "Order, taste, gossip.",     pos: { top: "58%", left: "48%" } },
+  travel:  { name: "Wayfarer's Crossroads",subtitle: "Carriage Stop",     icon: Plane,           tagline: "Maps, fares, weather.",     pos: { top: "44%", left: "22%" } },
+  culture: { name: "Bard's Hollow",        subtitle: "Folk Stage",        icon: Sparkles,        tagline: "Songs, dances, riddles.",   pos: { top: "72%", left: "76%" } },
+  daily:   { name: "Cobbled Square",       subtitle: "Market & Workshop", icon: Home,            tagline: "Errands, neighbors.",       pos: { top: "75%", left: "32%" } },
+  history: { name: "Ancient Ruins",        subtitle: "Crumbling Museum",  icon: ScrollText,      tagline: "Dynasties, relics, lore.",  pos: { top: "52%", left: "68%" } },
 };
 
 const REGION_NAMES = ["The Starting Shire", "The Whispering Valley", "Highland Frontier", "Coral Coast"];
@@ -38,27 +42,22 @@ function MapDashboard() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeLocation, setActiveLocation] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0); // 0..100, tied to session time
+  const [progress, setProgress] = useState(0);
   const [gateModal, setGateModal] = useState(false);
 
   useEffect(() => {
     loadProfile().then((p) => {
-      if (!p) {
-        navigate({ to: "/" });
-      } else {
-        setProfile(p as Profile);
-      }
+      if (!p) navigate({ to: "/" });
+      else setProfile(p as Profile);
     });
   }, [navigate]);
 
-  // Active session timer → adds map energy + gold + adventure progress purely by time
   useEffect(() => {
     if (!profile) return;
     const tick = setInterval(async () => {
       setProgress((p) => Math.min(100, p + 1));
       const id = getStoredProfileId();
       if (!id) return;
-      // Every ~30s, persist a small reward and an engagement log
       const { data } = await supabase
         .from("profiles")
         .update({
@@ -88,115 +87,150 @@ function MapDashboard() {
 
   const region = REGION_NAMES[(profile.current_region - 1) % REGION_NAMES.length];
   const gateUnlocked = profile.proficiency_score >= 50;
-  const locations = profile.interests.slice(0, 4);
+  const locations = profile.interests.filter((i) => LOCATIONS[i]).slice(0, 4);
+  const manaPct = Math.min(100, Math.round(((profile.map_energy ?? 0) / 100) * 100));
 
   return (
-    <div className="min-h-screen bg-surface text-foreground">
-      {/* HUD */}
-      <header className="sticky top-0 z-30 hud-blur border-b-2 border-gold-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-md bg-primary text-primary-foreground border-2 border-black shadow-retro-sm flex items-center justify-center font-serif font-bold">
-              {profile.language.toUpperCase().slice(0,2)}
+    <div className="min-h-screen bg-surface text-foreground flex">
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex w-64 flex-col panel-bark border-r-2 border-bark p-5">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 rounded-full bg-primary-container border-2 border-tertiary flex items-center justify-center text-tertiary font-serif glow-gold">
+            <User className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-serif text-base leading-tight truncate">Elder Linguist</p>
+            <p className="text-xs text-muted-foreground font-mono-label">Lv. {profile.exploration_level} Forest Walker</p>
+          </div>
+        </div>
+
+        <nav className="space-y-1 flex-1">
+          <NavItem icon={MapIcon} label="Map" active />
+          <NavItem icon={Scroll} label="Quests" />
+          <NavItem icon={BookOpen} label="Compendium" />
+          <NavItem icon={ShieldCheck} label="Armory" />
+          <NavItem icon={User} label="Profile" />
+        </nav>
+
+        <button className="w-full flex items-center justify-center gap-2 bg-tertiary text-tertiary-foreground font-serif rounded-full py-3 border-2 border-tertiary-container glow-gold">
+          <MapIcon className="w-4 h-4" /> Open Forest Map
+        </button>
+      </aside>
+
+      <main className="flex-1 min-w-0 flex flex-col">
+        {/* Mana / status bar */}
+        <header className="panel-bark border-b-2 border-bark px-4 sm:px-6 py-3 flex items-center gap-3">
+          <div className="lg:hidden w-10 h-10 rounded-full bg-primary-container border-2 border-tertiary flex items-center justify-center text-tertiary">
+            <User className="w-4 h-4" />
+          </div>
+          <div className="hidden sm:flex items-center gap-3 shrink-0">
+            <div className="w-11 h-11 rounded-full border-2 border-tertiary bg-surface-low flex items-center justify-center font-serif text-tertiary text-sm glow-gold">
+              {profile.exploration_level}
             </div>
-            <div>
-              <p className="font-serif text-[10px] uppercase tracking-[0.3em] text-tertiary">Explorer Lv. {profile.exploration_level}</p>
-              <div className="flex items-center gap-1 text-sm">
-                <Flame className="w-4 h-4 text-tertiary" />
-                <span className="font-semibold">{profile.streak_days}</span>
-                <span className="text-muted-foreground text-xs">day streak</span>
+            <div className="leading-tight">
+              <p className="font-serif text-sm">Elder Linguist</p>
+              <p className="text-[11px] text-muted-foreground font-mono-label flex items-center gap-1">
+                <Flame className="w-3 h-3 text-tertiary" /> {profile.streak_days} day streak
+              </p>
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-mono-label text-[10px] uppercase tracking-[0.3em] text-primary">Mana</span>
+              <span className="font-mono-label text-[10px] text-cream">{profile.map_energy}/100</span>
+            </div>
+            <div className="h-3 rounded-full bg-surface-low border border-bark overflow-hidden">
+              <div className="h-full vial-bar transition-all" style={{ width: `${manaPct}%` }} />
+            </div>
+          </div>
+
+          <div className="hidden md:flex items-center gap-2 shrink-0">
+            <Stat icon={<Coins className="w-3.5 h-3.5" />} label="Gold" value={profile.gold_tokens} />
+            <Stat icon={<Zap className="w-3.5 h-3.5" />} label="Energy" value={profile.map_energy} />
+          </div>
+        </header>
+
+        {/* Region viewport */}
+        <section className="relative flex-1 overflow-hidden parchment-inset border-y-2 border-bark">
+          <img src={forestMap} alt="Region map of an enchanted forest" className="absolute inset-0 w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-surface/40 via-transparent to-surface/80" />
+
+          {/* Top label */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 panel-bark border-2 border-tertiary/40 rounded-full px-4 py-1.5">
+            <p className="font-mono-label text-[10px] uppercase tracking-[0.35em] text-tertiary flex items-center gap-2">
+              <Compass className="w-3 h-3" /> Region {profile.current_region} · <span className="font-serif text-cream normal-case tracking-normal">{region}</span>
+            </p>
+          </div>
+
+          {/* Region Exam Gate (top right) */}
+          <button
+            onClick={() => setGateModal(true)}
+            className="absolute top-16 right-4 sm:top-20 sm:right-8 group"
+          >
+            <div className={`panel-bark border-2 rounded-md px-3 py-2 flex items-center gap-2 ${
+              gateUnlocked ? "border-tertiary glow-gold" : "border-bark opacity-90"
+            }`}>
+              <div className={`w-8 h-8 rounded flex items-center justify-center ${
+                gateUnlocked ? "bg-tertiary text-tertiary-foreground" : "bg-surface-low text-muted-foreground"
+              }`}>
+                {gateUnlocked ? <ShieldCheck className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+              </div>
+              <div className="text-left leading-tight">
+                <p className="font-mono-label text-[9px] uppercase tracking-widest text-tertiary">Region Gate</p>
+                <p className="font-serif text-xs text-cream">{gateUnlocked ? "Ready" : `${profile.proficiency_score}/50`}</p>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Stat icon={<Zap className="w-4 h-4" />} label="Energy" value={profile.map_energy} />
-            <Stat icon={<Coins className="w-4 h-4" />} label="Gold" value={profile.gold_tokens} />
-          </div>
-        </div>
-      </header>
+          </button>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
-        {/* Region header */}
-        <div className="mb-10">
-          <p className="font-serif text-xs uppercase tracking-[0.3em] text-tertiary mb-2 flex items-center gap-2">
-            <Compass className="w-3.5 h-3.5" /> Region {profile.current_region}
-          </p>
-          <h1 className="font-serif text-4xl md:text-5xl">{region}</h1>
-          <p className="text-muted-foreground mt-2 max-w-2xl">
-            Wander between locations shaped by your interests. Time spent here grows your strength —
-            mistakes never punish you.
-          </p>
-        </div>
-
-        {/* Locations grid */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
+          {/* Location pins */}
           {locations.map((id) => {
             const loc = LOCATIONS[id];
-            if (!loc) return null;
             const Icon = loc.icon;
             return (
               <button
                 key={id}
                 onClick={() => setActiveLocation(id)}
-                className="group text-left bg-surface-container border-2 border-gold-10 rounded-md p-6 shadow-retro hover:-translate-y-1 hover:border-tertiary transition-all glow-green"
+                className="absolute -translate-x-1/2 -translate-y-1/2 group"
+                style={{ top: loc.pos.top, left: loc.pos.left }}
               >
-                <div className="flex items-start justify-between mb-6">
-                  <div className="w-14 h-14 rounded-md bg-tertiary text-tertiary-foreground border-2 border-black flex items-center justify-center shadow-retro-sm">
-                    <Icon className="w-7 h-7" />
+                <div className="relative">
+                  <div className="w-14 h-14 rounded-full bg-primary-container border-2 border-tertiary flex items-center justify-center text-tertiary glow-emerald group-hover:scale-110 transition-transform">
+                    <Icon className="w-6 h-6" />
                   </div>
-                  <span className="text-[10px] uppercase tracking-widest text-tertiary border border-gold-40 rounded px-2 py-1">Open</span>
+                  <div className="absolute left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap">
+                    <span className="panel-bark border border-tertiary/40 rounded px-2 py-1 font-mono-label text-[10px] uppercase tracking-wider text-cream">
+                      {loc.name}
+                    </span>
+                  </div>
                 </div>
-                <h3 className="font-serif text-2xl mb-1">{loc.name}</h3>
-                <p className="text-tertiary text-xs uppercase tracking-widest mb-3">{loc.subtitle}</p>
-                <p className="text-muted-foreground text-sm">{loc.tagline}</p>
               </button>
             );
           })}
 
-          {/* Region Exam Gate */}
-          <button
-            onClick={() => setGateModal(true)}
-            className={`relative text-left rounded-md p-6 border-2 transition-all md:col-span-2 lg:col-span-1 ${
-              gateUnlocked
-                ? "bg-surface-container border-tertiary shadow-retro glow-gold hover:-translate-y-1"
-                : "bg-surface-bright/40 border-gold-10 cursor-pointer opacity-80"
-            }`}
-          >
-            <div className="flex items-start justify-between mb-6">
-              <div className={`w-14 h-14 rounded-md border-2 border-black flex items-center justify-center shadow-retro-sm ${
-                gateUnlocked ? "bg-primary text-primary-foreground" : "bg-surface-container-high text-muted-foreground"
-              }`}>
-                {gateUnlocked ? <ShieldCheck className="w-7 h-7" /> : <Lock className="w-7 h-7" />}
-              </div>
-              <span className={`text-[10px] uppercase tracking-widest border rounded px-2 py-1 ${
-                gateUnlocked ? "text-tertiary border-gold-40" : "text-muted-foreground border-gold-10"
-              }`}>
-                {gateUnlocked ? "Ready" : `Locked · ${profile.proficiency_score}/50`}
-              </span>
+          {/* Bottom: Daily Adventure Progress */}
+          <div className="absolute bottom-4 left-4 right-4 panel-carved rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="font-mono-label text-[10px] uppercase tracking-[0.3em] text-tertiary">Daily Adventure</p>
+              <p className="font-mono-label text-[10px] text-cream">{progress}%</p>
             </div>
-            <h3 className="font-serif text-2xl mb-1">The Region Gate</h3>
-            <p className="text-tertiary text-xs uppercase tracking-widest mb-3">Proficiency Challenge</p>
-            <p className="text-muted-foreground text-sm">
-              {gateUnlocked
-                ? "The fortress doors hum. Step forward to unlock the next territory."
-                : "The gate stands sealed. Grow your exploration to awaken it."}
+            <div className="h-2.5 rounded-full bg-surface-low border border-bark overflow-hidden">
+              <div className="h-full vial-bar transition-all" style={{ width: `${progress}%` }} />
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-2 font-mono-label">
+              Grows with time spent · mistakes never punish you
             </p>
-          </button>
+          </div>
         </section>
 
-        {/* Daily Adventure Progress */}
-        <section className="bg-surface-container border-2 border-gold-10 rounded-md p-5 shadow-retro-sm">
-          <div className="flex items-center justify-between mb-3">
-            <p className="font-serif text-sm uppercase tracking-widest text-tertiary">Daily Adventure Progress</p>
-            <p className="text-xs text-muted-foreground">Time spent · {progress}%</p>
-          </div>
-          <div className="h-4 bg-surface rounded border-2 border-black overflow-hidden">
-            <div
-              className="h-full bg-primary glow-green transition-all"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </section>
+        {/* Mobile bottom nav */}
+        <nav className="lg:hidden panel-bark border-t-2 border-bark px-2 py-2 flex items-center justify-around">
+          <BottomTab icon={MapIcon} label="Map" active />
+          <BottomTab icon={Scroll} label="Quests" />
+          <BottomTab icon={BookOpen} label="Lore" />
+          <BottomTab icon={ShieldCheck} label="Armory" />
+          <BottomTab icon={User} label="Me" />
+        </nav>
       </main>
 
       {activeLocation && (
@@ -210,23 +244,26 @@ function MapDashboard() {
 
       {gateModal && (
         <Modal onClose={() => setGateModal(false)}>
-          <h2 className="font-serif text-3xl mb-3">Regional Proficiency Challenge</h2>
-          <p className="text-muted-foreground mb-6">
-            Are you ready to attempt the challenge to unlock the next territory?
-            Your hidden proficiency score is{" "}
-            <span className="text-tertiary font-semibold">{profile.proficiency_score}</span>.
+          <p className="font-mono-label text-[10px] uppercase tracking-[0.35em] text-tertiary mb-2 text-center">
+            ⟢ Regional Trial ⟣
           </p>
-          <div className="flex gap-3 justify-end">
+          <h2 className="font-serif text-2xl text-center mb-3">Proficiency Challenge</h2>
+          <p className="text-muted-foreground text-sm text-center mb-6">
+            Are you ready to attempt the challenge to unlock the next territory?
+            Your hidden proficiency is{" "}
+            <span className="text-tertiary font-mono-label">{profile.proficiency_score}/50</span>.
+          </p>
+          <div className="flex gap-3 justify-center">
             <button
               onClick={() => setGateModal(false)}
-              className="px-5 py-3 border-2 border-gold-10 rounded-md font-medium hover:border-gold-40"
+              className="px-5 py-2.5 panel-bark border-2 border-bark rounded-full font-mono-label text-xs uppercase tracking-widest text-muted-foreground hover:border-tertiary/40"
             >
               Not yet
             </button>
             <button
               disabled={!gateUnlocked}
               onClick={() => setGateModal(false)}
-              className="px-5 py-3 bg-primary text-primary-foreground border-2 border-black rounded-md font-serif shadow-retro-sm disabled:opacity-40"
+              className="px-5 py-2.5 bg-tertiary text-tertiary-foreground rounded-full font-serif border-2 border-tertiary-container glow-gold disabled:opacity-40 disabled:glow-gold"
             >
               {gateUnlocked ? "Enter the Gate" : "Locked"}
             </button>
@@ -237,13 +274,34 @@ function MapDashboard() {
   );
 }
 
+function NavItem({ icon: Icon, label, active }: { icon: any; label: string; active?: boolean }) {
+  return (
+    <button className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${
+      active ? "bg-primary-container text-primary border border-primary/40" : "text-muted-foreground hover:bg-surface-low"
+    }`}>
+      <Icon className="w-4 h-4" /> <span className="font-mono-label uppercase text-xs tracking-wider">{label}</span>
+    </button>
+  );
+}
+
+function BottomTab({ icon: Icon, label, active }: { icon: any; label: string; active?: boolean }) {
+  return (
+    <button className={`flex-1 flex flex-col items-center gap-0.5 py-1 ${
+      active ? "text-tertiary" : "text-muted-foreground"
+    }`}>
+      <Icon className="w-5 h-5" />
+      <span className="font-mono-label text-[9px] uppercase tracking-wider">{label}</span>
+    </button>
+  );
+}
+
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
-    <div className="flex items-center gap-2 bg-surface-container border-2 border-gold-10 rounded-md px-3 py-2 shadow-retro-sm">
+    <div className="flex items-center gap-1.5 panel-bark border-2 border-tertiary/30 rounded-full px-3 py-1.5">
       <span className="text-tertiary">{icon}</span>
       <div className="leading-tight">
-        <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
-        <p className="font-serif text-sm font-bold">{value}</p>
+        <p className="font-mono-label text-[9px] uppercase tracking-widest text-muted-foreground">{label}</p>
+        <p className="font-serif text-xs text-cream">{value}</p>
       </div>
     </div>
   );
@@ -251,9 +309,9 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
 
 function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="bg-surface-container border-2 border-tertiary rounded-md shadow-retro p-8 max-w-lg w-full"
+        className="panel-bark border-2 border-tertiary rounded-xl shadow-panel p-6 max-w-md w-full glow-gold"
         onClick={(e) => e.stopPropagation()}
       >
         {children}
