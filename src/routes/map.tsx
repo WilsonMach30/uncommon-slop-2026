@@ -280,8 +280,12 @@ function MapViewport({
 }) {
   return (
     <div className="relative flex-1 overflow-hidden parchment-inset">
-      <img src={forestMap} alt="Region map of an enchanted forest" className="absolute inset-0 w-full h-full object-cover" />
+      <img src={forestMap} alt="Region map of an enchanted forest" className="absolute inset-0 w-full h-full object-cover animate-bg-drift" />
       <div className="absolute inset-0 bg-gradient-to-b from-surface/40 via-transparent to-surface/80" />
+      {/* Drifting sparkle motes */}
+      <span className="absolute top-[20%] left-[15%] text-tertiary animate-twinkle"><Sparkles className="w-3 h-3" /></span>
+      <span className="absolute top-[35%] right-[20%] text-tertiary animate-twinkle" style={{ animationDelay: "0.8s" }}><Sparkles className="w-2.5 h-2.5" /></span>
+      <span className="absolute bottom-[30%] left-[40%] text-tertiary animate-twinkle" style={{ animationDelay: "1.6s" }}><Sparkles className="w-3 h-3" /></span>
 
       <div className="absolute top-4 left-1/2 -translate-x-1/2 panel-bark border-2 border-tertiary/40 rounded-full px-4 py-1.5">
         <p className="font-mono-label text-[10px] uppercase tracking-[0.35em] text-tertiary flex items-center gap-2">
@@ -311,15 +315,15 @@ function MapViewport({
         </div>
       </button>
 
-      {locations.map((id) => {
+      {locations.map((id, idx) => {
         const loc = LOCATIONS[id];
         const Icon = loc.icon;
         return (
           <button
             key={id}
             onClick={() => onLocationClick(id)}
-            className="absolute -translate-x-1/2 -translate-y-1/2 group"
-            style={{ top: loc.pos.top, left: loc.pos.left }}
+            className="absolute -translate-x-1/2 -translate-y-1/2 group animate-float"
+            style={{ top: loc.pos.top, left: loc.pos.left, animationDelay: `${idx * 0.4}s` }}
           >
             <div className="relative">
               <div className="w-14 h-14 rounded-full bg-primary-container border-2 border-tertiary flex items-center justify-center text-tertiary glow-emerald group-hover:scale-110 transition-transform">
@@ -389,7 +393,7 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
       <span className="text-tertiary">{icon}</span>
       <div className="leading-tight">
         <p className="font-mono-label text-[9px] uppercase tracking-widest text-muted-foreground">{label}</p>
-        <p className="font-serif text-xs text-cream">{value}</p>
+        <p key={value} className="font-serif text-xs text-cream animate-value-pop">{value}</p>
       </div>
     </div>
   );
