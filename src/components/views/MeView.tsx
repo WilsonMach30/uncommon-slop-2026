@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { User, Shield, Sparkles, Crown, LogOut, Bell, Settings } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Shield, Sparkles, Crown, LogOut, Bell, Settings, Check } from "lucide-react";
+import {
+  TEMPLATES, TEMPLATE_BY_KEY, ITEM_BY_KEY, SLOTS,
+  getEquipped, getTemplate, setTemplate, onEquippedChange, onTemplateChange,
+} from "@/lib/cosmetics";
 
 const INTEREST_LABELS: Record<string, string> = {
   food: "Food & Cuisine",
@@ -8,12 +11,6 @@ const INTEREST_LABELS: Record<string, string> = {
   culture: "Culture & Arts",
   daily: "Daily Life",
   history: "History & Legends",
-};
-
-const SLOT_EMOJI: Record<string, string> = {
-  Headwear: "🧙",
-  Back: "🧥",
-  "Main Hand": "🪶",
 };
 
 export default function MeView({ profileId, profile }: {
@@ -25,18 +22,27 @@ export default function MeView({ profileId, profile }: {
   };
 }) {
   const [equipped, setEquipped] = useState<Record<string, string>>({});
+  const [templateKey, setTemplateKey] = useState<string>("bard");
+  const [popKey, setPopKey] = useState(0);
 
   useEffect(() => {
-    supabase.from("unlocked_cosmetics").select("slot, item_key")
-      .eq("profile_id", profileId)
-      .then(({ data }) => {
-        const map: Record<string, string> = {};
-        (data ?? []).forEach((row) => { if (!map[row.slot]) map[row.slot] = row.item_key; });
-        setEquipped(map);
-      });
+    setEquipped(getEquipped(profileId) as Record<string, string>);
+    setTemplateKey(getTemplate(profileId));
+    const u1 = onEquippedChange(() => {
+      setEquipped(getEquipped(profileId) as Record<string, string>);
+      setPopKey((k) => k + 1);
+    });
+    const u2 = onTemplateChange(() => setTemplateKey(getTemplate(profileId)));
+    return () => { u1(); u2(); };
   }, [profileId]);
 
-  // Synthetic per-interest progress derived from current state
+  const template = TEMPLATE_BY_KEY[templateKey] ?? TEMPLATES[0];
+
+  const pickTemplate = (key: string) => {
+    setTemplate(profileId, key);
+    setPopKey((k) => k + 1);
+  };
+
   const interestStats = profile.interests.map((i, idx) => ({
     key: i,
     label: INTEREST_LABELS[i] ?? i,
@@ -55,15 +61,24 @@ export default function MeView({ profileId, profile }: {
         {/* Left: avatar / equipped */}
         <aside className="space-y-4">
           <div className="relative panel-bark border-2 border-tertiary rounded-lg p-5 glow-gold shadow-hard">
-            {/* Title ribbon */}
             <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-tertiary text-tertiary-foreground px-4 py-1 rounded-full font-mono-label text-[10px] uppercase tracking-widest border-2 border-tertiary-container whitespace-nowrap">
-              {profile.display_name ?? "Wilson"} the Aspiring Bard
+              {profile.display_name ?? template.name} {template.title}
             </div>
-            <div className="mt-3 aspect-square rounded-md bg-surface-low border-2 border-bark flex items-center justify-center text-7xl relative overflow-hidden">
-              <span className="absolute top-2 right-2 text-3xl">{equipped["Headwear"] ? SLOT_EMOJI["Headwear"] : ""}</span>
-              <User className="w-24 h-24 text-tertiary" />
-              <span className="absolute bottom-2 left-2 text-3xl">{equipped["Back"] ? SLOT_EMOJI["Back"] : ""}</span>
-              <span className="absolute bottom-2 right-2 text-3xl">{equipped["Main Hand"] ? SLOT_EMOJI["Main Hand"] : ""}</span>
+            <div className="mt-3 aspect-square rounded-md bg-surface-low border-2 border-bark flex items-center justify-center relative overflow-hidden">
+              {/* Backdrop sparkles */}
+              <span className="absolute top-3 left-3 text-tertiary animate-twinkle"><Sparkles className="w-3 h-3" /></span>
+              <span className="absolute bottom-6 right-4 text-tertiary animate-twinkle" style={{ animationDelay: "1.2s" }}><Sparkles className="w-2.5 h-2.5" /></span>
+              {/* Equipped gear floating layers */}
+              <span key={`hat-${popKey}`} className="absolute top-2 right-2 text-3xl animate-gear-pop">
+                {equipped["Headwear"] ? ITEM_BY_KEY[equipped["Headwear"]]?.emoji : ""}
+              </span>
+              <span key={`avatar-${popKey}`} className="text-8xl animate-float select-none">{template.emoji}</span>
+              <span key={`back-${popKey}`} className="absolute bottom-2 left-2 text-3xl animate-gear-pop">
+                {equipped["Back"] ? ITEM_BY_KEY[equipped["Back"]]?.emoji : ""}
+              </span>
+              <span key={`hand-${popKey}`} className="absolute bottom-2 right-2 text-3xl animate-gear-pop">
+                {equipped["Main Hand"] ? ITEM_BY_KEY[equipped["Main Hand"]]?.emoji : ""}
+              </span>
             </div>
             <div className="mt-4 text-center">
               <p className="font-mono-label text-[10px] uppercase tracking-[0.3em] text-tertiary">
@@ -75,16 +90,60 @@ export default function MeView({ profileId, profile }: {
             </div>
           </div>
 
+          {/* Character template picker */}
+          <div className="panel-bark border-2 border-bark rounded-lg p-4">
+            <h3 className="font-mono-label text-[10px] uppercase tracking-[0.3em] text-tertiary mb-3">Choose Your Form</h3>
+            <div className="grid grid-cols-4 gap-2">
+              {TEMPLATES.map((t) => {
+                const active = t.key === templateKey;
+                return (
+                  <button
+                    key={t.key}
+                    onClick={() => pickTemplate(t.key)}
+                    title={`${t.name} ${t.title}`}
+                    className={`relative aspect-square rounded-md p-1 flex items-center justify-center text-2xl transition-all bg-surface-low border-2 ${
+                      active
+                        ? "border-tertiary glow-gold scale-105"
+                        : "border-bark hover:border-tertiary/60 hover:-translate-y-0.5"
+                    }`}
+                  >
+                    <span className={active ? "animate-float" : ""}>{t.emoji}</span>
+                    {active && (
+                      <span className="absolute -top-1 -right-1 bg-tertiary text-tertiary-foreground rounded-full p-0.5 border border-tertiary-container">
+                        <Check className="w-2.5 h-2.5" strokeWidth={3} />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-3 font-mono-label">
+              {template.name} {template.title}
+            </p>
+          </div>
+
+          {/* Equipped slots */}
           <div className="panel-bark border-2 border-bark rounded-lg p-4">
             <h3 className="font-mono-label text-[10px] uppercase tracking-[0.3em] text-tertiary mb-3">Equipped Gear</h3>
             <div className="grid grid-cols-3 gap-2">
-              {(["Headwear", "Back", "Main Hand"] as const).map((slot) => (
-                <div key={slot} className="aspect-square rounded bg-surface-low border-2 border-bark flex flex-col items-center justify-center p-1">
-                  <span className="text-2xl">{equipped[slot] ? SLOT_EMOJI[slot] : "—"}</span>
-                  <span className="font-mono-label text-[8px] uppercase tracking-wider text-muted-foreground mt-1 text-center leading-tight">{slot}</span>
-                </div>
-              ))}
+              {SLOTS.map((slot) => {
+                const eq = equipped[slot];
+                const item = eq ? ITEM_BY_KEY[eq] : null;
+                return (
+                  <div key={slot} className={`aspect-square rounded bg-surface-low border-2 flex flex-col items-center justify-center p-1 transition-all ${
+                    item ? "border-[#4ade80] glow-cosmetic" : "border-bark"
+                  }`}>
+                    <span className="text-2xl">{item?.emoji ?? "—"}</span>
+                    <span className="font-mono-label text-[8px] uppercase tracking-wider text-muted-foreground mt-1 text-center leading-tight">
+                      {item?.label ?? slot}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
+            <p className="text-[10px] text-muted-foreground mt-3 font-mono-label">
+              Buy more in the Armory · tap an owned item to equip
+            </p>
           </div>
 
           <div className="grid grid-cols-3 gap-2">
@@ -116,7 +175,6 @@ export default function MeView({ profileId, profile }: {
             </div>
           </section>
 
-          {/* Account footer */}
           <footer className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-4 border-t border-bark opacity-50 text-[11px] font-mono-label uppercase tracking-wider text-muted-foreground">
             <a className="flex items-center gap-1 hover:text-tertiary cursor-pointer"><Settings className="w-3 h-3" />Settings</a>
             <a className="flex items-center gap-1 hover:text-tertiary cursor-pointer"><Bell className="w-3 h-3" />Notifications</a>

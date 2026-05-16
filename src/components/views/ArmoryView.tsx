@@ -1,24 +1,11 @@
 import { useEffect, useState } from "react";
-import { Lock, Coins, Sparkles, X } from "lucide-react";
+import { Lock, Coins, Sparkles, X, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-type Item = { key: string; slot: string; label: string; emoji: string; cost: number };
-
-const ITEMS: Item[] = [
-  // Headwear
-  { key: "wizard_hat",    slot: "Headwear", label: "Apprentice Hat",  emoji: "🧙", cost: 30  },
-  { key: "feathered_cap", slot: "Headwear", label: "Feathered Cap",   emoji: "🎩", cost: 60  },
-  { key: "crown_gold",    slot: "Headwear", label: "Gilded Crown",    emoji: "👑", cost: 200 },
-  // Back
-  { key: "explorer_cape", slot: "Back",     label: "Explorer's Cape", emoji: "🧥", cost: 40  },
-  { key: "shadow_cloak",  slot: "Back",     label: "Shadow Cloak",    emoji: "🦇", cost: 120 },
-  { key: "starlight_cloak", slot: "Back",   label: "Starlight Cloak", emoji: "✨", cost: 250 },
-  // Main hand
-  { key: "scribe_quill",  slot: "Main Hand",label: "Scribe's Quill",  emoji: "🪶", cost: 25  },
-  { key: "iron_sword",    slot: "Main Hand",label: "Iron Sword",      emoji: "⚔️", cost: 80  },
-  { key: "rune_staff",    slot: "Main Hand",label: "Runed Staff",     emoji: "🪄", cost: 150 },
-];
+import {
+  ITEMS, SLOTS, type CosmeticItem,
+  getEquipped, setEquipped, onEquippedChange,
+} from "@/lib/cosmetics";
 
 export default function ArmoryView({ profileId, gold, onGoldChange }: {
   profileId: string;
@@ -26,13 +13,14 @@ export default function ArmoryView({ profileId, gold, onGoldChange }: {
   onGoldChange: (next: number) => void;
 }) {
   const [unlocked, setUnlocked] = useState<Set<string>>(new Set());
-  const [confirm, setConfirm] = useState<Item | null>(null);
+  const [equipped, setEquippedState] = useState<Record<string, string>>({});
+  const [confirm, setConfirm] = useState<CosmeticItem | null>(null);
 
   useEffect(() => {
     supabase.from("unlocked_cosmetics").select("item_key").eq("profile_id", profileId)
-      .then(({ data }) => {
-        if (data) setUnlocked(new Set(data.map((d) => d.item_key)));
-      });
+      .then(({ data }) => { if (data) setUnlocked(new Set(data.map((d) => d.item_key))); });
+    setEquippedState(getEquipped(profileId) as Record<string, string>);
+    return onEquippedChange(() => setEquippedState(getEquipped(profileId) as Record<string, string>));
   }, [profileId]);
 
   const purchase = async () => {
@@ -44,6 +32,10 @@ export default function ArmoryView({ profileId, gold, onGoldChange }: {
     const nextGold = gold - confirm.cost;
     onGoldChange(nextGold);
     setUnlocked((prev) => new Set(prev).add(confirm.key));
+    // auto-equip on first purchase if slot is empty
+    if (!equipped[confirm.slot]) {
+      setEquipped(profileId, confirm.slot, confirm.key);
+    }
 
     await Promise.all([
       supabase.from("profiles").update({ gold_tokens: nextGold }).eq("id", profileId),
@@ -55,7 +47,11 @@ export default function ArmoryView({ profileId, gold, onGoldChange }: {
     setConfirm(null);
   };
 
-  const slots = ["Headwear", "Back", "Main Hand"];
+  const toggleEquip = (item: CosmeticItem) => {
+    const isOn = equipped[item.slot] === item.key;
+    setEquipped(profileId, item.slot, isOn ? null : item.key);
+    toast.success(isOn ? `Unequipped ${item.label}` : `Equipped ${item.label}`);
+  };
 
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6">
@@ -66,14 +62,14 @@ export default function ArmoryView({ profileId, gold, onGoldChange }: {
           <p className="text-xs text-muted-foreground mt-1">Style your wanderer · purely cosmetic</p>
         </div>
         <div className="panel-bark border-2 border-tertiary rounded-full px-4 py-2 flex items-center gap-2 glow-gold">
-          <Coins className="w-4 h-4 text-tertiary" />
+          <Coins className="w-4 h-4 text-tertiary animate-twinkle" />
           <span className="font-serif text-lg text-cream">{gold}</span>
           <span className="font-mono-label text-[10px] uppercase tracking-widest text-muted-foreground">Gold</span>
         </div>
       </header>
 
       <div className="space-y-6">
-        {slots.map((slot) => (
+        {SLOTS.map((slot) => (
           <section key={slot}>
             <h3 className="font-mono-label text-[11px] uppercase tracking-[0.3em] text-tertiary mb-3">
               {slot}
@@ -81,35 +77,52 @@ export default function ArmoryView({ profileId, gold, onGoldChange }: {
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
               {ITEMS.filter((i) => i.slot === slot).map((item) => {
                 const owned = unlocked.has(item.key);
+                const isEquipped = equipped[item.slot] === item.key;
                 return (
-                  <button
-                    key={item.key}
-                    onClick={() => !owned && setConfirm(item)}
-                    className={`relative aspect-square rounded-md border-2 panel-bark p-2 flex flex-col items-center justify-center transition-transform hover:-translate-y-0.5 ${
-                      owned
-                        ? "border-[#4ade80] glow-cosmetic cursor-default"
-                        : "border-bark hover:border-tertiary/60"
-                    }`}
-                  >
-                    <span className={`text-3xl sm:text-4xl ${owned ? "" : "opacity-50"}`}>{item.emoji}</span>
-                    <span className="font-mono-label text-[9px] uppercase tracking-wider text-cream mt-1 text-center leading-tight">
-                      {item.label}
-                    </span>
-                    {!owned ? (
-                      <>
-                        <div className="absolute inset-0 bg-black/50 rounded flex items-center justify-center">
-                          <Lock className="w-5 h-5 text-tertiary/80" />
-                        </div>
-                        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 panel-bark border border-tertiary rounded-full px-2 py-0.5 font-mono-label text-[9px] text-tertiary flex items-center gap-1">
-                          <Coins className="w-2.5 h-2.5" /> {item.cost}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="absolute top-1 right-1 text-[#4ade80]">
-                        <Sparkles className="w-3.5 h-3.5" />
+                  <div key={item.key} className="relative">
+                    <button
+                      onClick={() => owned ? toggleEquip(item) : setConfirm(item)}
+                      className={`relative w-full aspect-square rounded-md border-2 panel-bark p-2 flex flex-col items-center justify-center transition-all hover:-translate-y-0.5 ${
+                        isEquipped
+                          ? "border-[#4ade80] glow-cosmetic"
+                          : owned
+                            ? "border-tertiary/60 hover:border-tertiary"
+                            : "border-bark hover:border-tertiary/60"
+                      }`}
+                    >
+                      <span className={`text-3xl sm:text-4xl ${owned ? "" : "opacity-50"} ${isEquipped ? "animate-float" : ""}`}>
+                        {item.emoji}
                       </span>
+                      <span className="font-mono-label text-[9px] uppercase tracking-wider text-cream mt-1 text-center leading-tight">
+                        {item.label}
+                      </span>
+                      {!owned && (
+                        <>
+                          <div className="absolute inset-0 bg-black/55 rounded flex items-center justify-center">
+                            <Lock className="w-5 h-5 text-tertiary/80" />
+                          </div>
+                          <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 panel-bark border border-tertiary rounded-full px-2 py-0.5 font-mono-label text-[9px] text-tertiary flex items-center gap-1">
+                            <Coins className="w-2.5 h-2.5" /> {item.cost}
+                          </span>
+                        </>
+                      )}
+                      {isEquipped && (
+                        <span className="absolute top-1 right-1 bg-[#4ade80] text-[#003829] rounded-full p-0.5">
+                          <Check className="w-3 h-3" strokeWidth={3} />
+                        </span>
+                      )}
+                      {owned && !isEquipped && (
+                        <span className="absolute top-1 right-1 text-tertiary">
+                          <Sparkles className="w-3.5 h-3.5" />
+                        </span>
+                      )}
+                    </button>
+                    {owned && (
+                      <p className="mt-1 text-center font-mono-label text-[9px] uppercase tracking-wider text-muted-foreground">
+                        {isEquipped ? "Tap to unequip" : "Tap to equip"}
+                      </p>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -127,7 +140,7 @@ export default function ArmoryView({ profileId, gold, onGoldChange }: {
               <X className="w-4 h-4" />
             </button>
             <div className="text-center">
-              <span className="text-6xl block mb-2">{confirm.emoji}</span>
+              <span className="text-6xl block mb-2 animate-float">{confirm.emoji}</span>
               <p className="font-mono-label text-[10px] uppercase tracking-[0.3em] text-tertiary">{confirm.slot}</p>
               <h3 className="font-serif text-2xl text-cream mt-1">{confirm.label}</h3>
               <p className="text-sm text-muted-foreground mt-4">
@@ -137,22 +150,13 @@ export default function ArmoryView({ profileId, gold, onGoldChange }: {
                 </span>{" "}
                 Gold Tokens?
               </p>
-              <p className="text-[11px] text-muted-foreground mt-1">
-                You currently hold {gold} gold.
-              </p>
+              <p className="text-[11px] text-muted-foreground mt-1">You currently hold {gold} gold.</p>
               <div className="flex gap-2 mt-6">
-                <button
-                  onClick={() => setConfirm(null)}
-                  className="flex-1 px-4 py-2.5 panel-bark border-2 border-bark rounded-full font-mono-label text-xs uppercase tracking-widest text-muted-foreground"
-                >
+                <button onClick={() => setConfirm(null)} className="flex-1 px-4 py-2.5 panel-bark border-2 border-bark rounded-full font-mono-label text-xs uppercase tracking-widest text-muted-foreground">
                   Cancel
                 </button>
-                <button
-                  onClick={purchase}
-                  disabled={gold < confirm.cost}
-                  className="flex-1 px-4 py-2.5 bg-tertiary text-tertiary-foreground rounded-full font-serif border-2 border-tertiary-container glow-gold disabled:opacity-40 disabled:glow-gold"
-                >
-                  Forge it
+                <button onClick={purchase} disabled={gold < confirm.cost} className="flex-1 px-4 py-2.5 bg-tertiary text-tertiary-foreground rounded-full font-serif border-2 border-tertiary-container glow-gold disabled:opacity-40">
+                  Forge & Equip
                 </button>
               </div>
             </div>

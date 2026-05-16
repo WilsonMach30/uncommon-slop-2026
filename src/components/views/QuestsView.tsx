@@ -137,15 +137,15 @@ export default function QuestsView({ profileId, regionXp, explorationLevel }: {
             return (
               <div
                 key={q.id}
-                className="bg-[#f4e4c1] text-[#3b1300] rounded-md p-4 border border-tertiary/10 shadow-hard"
+                className="bg-[#f4e4c1] text-[#1a0800] rounded-md p-4 border-2 border-[#3b1300] shadow-hard"
               >
                 <div className="flex items-center justify-between mb-2 gap-3">
-                  <h4 className="font-serif text-base">{q.title}</h4>
-                  <span className="font-mono-label text-[11px] uppercase tracking-wider whitespace-nowrap">
+                  <h4 className="font-serif text-base font-bold text-[#1a0800]">{q.title}</h4>
+                  <span className="font-mono-label text-[11px] uppercase tracking-wider whitespace-nowrap font-bold text-[#1a0800] bg-[#f7be1d] px-2 py-0.5 rounded-full border border-[#3b1300]">
                     {pg} / {q.target}
                   </span>
                 </div>
-                <div className="h-3 bg-[#3b1300]/15 rounded-full overflow-hidden border border-[#3b1300]/20">
+                <div className="h-3 bg-[#3b1300]/25 rounded-full overflow-hidden border border-[#3b1300]/40">
                   <div className={`h-full transition-all ${done ? "bg-[#4ade80]" : "vial-bar"}`} style={{ width: `${pct}%` }} />
                 </div>
               </div>
