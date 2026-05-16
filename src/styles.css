@@ -279,4 +279,54 @@
     0%, 100% { opacity: 0.7; }
     50%      { opacity: 1; }
   }
+
+  /* Confetti fall */
+  @keyframes confetti-fall {
+    0%   { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
+    10%  { opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0.9; }
+  }
+
+  /* Bird flap + swoop across screen */
+  @keyframes bird-fly {
+    0%   { transform: translate(-15vw, 30vh) scale(1); opacity: 0; }
+    10%  { opacity: 1; }
+    50%  { transform: translate(50vw, 10vh) scale(1.1); }
+    100% { transform: translate(115vw, 40vh) scale(0.9); opacity: 0; }
+  }
+  @keyframes bird-flap {
+    0%, 100% { transform: scaleY(1); }
+    50%      { transform: scaleY(0.55); }
+  }
+
+  /* Flower float upward */
+  @keyframes flower-float {
+    0%   { transform: translateY(110vh) rotate(0deg); opacity: 0; }
+    15%  { opacity: 1; }
+    100% { transform: translateY(-15vh) rotate(360deg); opacity: 0; }
+  }
+
+  /* Shivering in bed */
+  @keyframes shiver {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    20%      { transform: translate(-2px, 1px) rotate(-1deg); }
+    40%      { transform: translate(2px, -1px) rotate(1deg); }
+    60%      { transform: translate(-1px, 2px) rotate(-0.7deg); }
+    80%      { transform: translate(1px, -2px) rotate(0.7deg); }
+  }
+  @keyframes breath-puff {
+    0%   { transform: translate(0, 0) scale(0.6); opacity: 0; }
+    30%  { opacity: 0.8; }
+    100% { transform: translate(18px, -22px) scale(1.6); opacity: 0; }
+  }
+  @keyframes spoon-feed {
+    0%, 100% { transform: translate(0, 0) rotate(-12deg); }
+    40%      { transform: translate(-22px, -6px) rotate(8deg); }
+    60%      { transform: translate(-22px, -6px) rotate(8deg); }
+  }
+  @keyframes steam-rise {
+    0%   { transform: translateY(0) scale(1);   opacity: 0; }
+    30%  { opacity: 0.7; }
+    100% { transform: translateY(-30px) scale(1.5); opacity: 0; }
+  }
 }
