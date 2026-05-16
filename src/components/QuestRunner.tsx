@@ -290,6 +290,68 @@ export default function QuestRunner({ onExit }: { onExit?: () => void }) {
               maskImage: "radial-gradient(circle at center, black 10%, transparent 70%)",
             }}
           />
+          {/* confetti rain */}
+          <div aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden">
+            {confetti.map((c) => (
+              <span
+                key={c.id}
+                className="absolute top-0 block"
+                style={{
+                  left: `${c.left}%`,
+                  width: c.size,
+                  height: c.size * 0.4,
+                  background: c.color,
+                  transform: `rotate(${c.rot}deg)`,
+                  borderRadius: 2,
+                  animation: `confetti-fall ${c.duration}s linear ${c.delay}s infinite`,
+                  boxShadow: `0 0 6px ${c.color}88`,
+                }}
+              />
+            ))}
+          </div>
+          {/* golden birds */}
+          <div aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden">
+            {birds.map((b) => (
+              <span
+                key={b.id}
+                className="absolute"
+                style={{
+                  top: `${b.top}%`,
+                  left: 0,
+                  fontSize: b.size,
+                  filter: "drop-shadow(0 0 10px rgba(247,190,29,0.9)) hue-rotate(15deg) saturate(1.4)",
+                  animation: `bird-fly ${b.duration}s linear ${b.delay}s infinite`,
+                }}
+              >
+                <span
+                  className="inline-block"
+                  style={{
+                    animation: `bird-flap ${b.flap}s ease-in-out infinite`,
+                    transformOrigin: "center",
+                  }}
+                >
+                  🕊️
+                </span>
+              </span>
+            ))}
+          </div>
+          {/* floating flowers */}
+          <div aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden">
+            {flowers.map((f) => (
+              <span
+                key={f.id}
+                className="absolute bottom-0"
+                style={{
+                  left: `${f.left}%`,
+                  fontSize: f.size,
+                  filter: "drop-shadow(0 0 6px rgba(247,190,29,0.5))",
+                  animation: `flower-float ${f.duration}s linear ${f.delay}s infinite`,
+                }}
+              >
+                {f.emoji}
+              </span>
+            ))}
+          </div>
           {/* floating sparkles */}
           <div aria-hidden className="absolute inset-0 pointer-events-none">
             {sparkles.map((s) => (
