@@ -484,3 +484,114 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
     </div>
   );
 }
+
+function SpeakingMicBar({ disabled }: { disabled?: boolean }) {
+  const [recording, setRecording] = useState(false);
+  const [responding, setResponding] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const startRecording = async () => {
+    if (disabled || recording || responding) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      chunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const form = new FormData();
+        form.append("audio", blob, "recording.webm");
+        setResponding(true);
+        try {
+          const res = await fetch("http://127.0.0.1:5000/respond-to-voice", { method: "POST", body: form });
+          if (!res.ok) throw new Error(await res.text());
+          const audioBlob = await res.blob();
+          const url = URL.createObjectURL(audioBlob);
+          if (audioRef.current) {
+            audioRef.current.src = url;
+            audioRef.current.play();
+          }
+        } catch (err) {
+          console.error("Voice pipeline error:", err);
+        } finally {
+          setResponding(false);
+        }
+      };
+      mr.start();
+      mediaRecorderRef.current = mr;
+      setRecording(true);
+    } catch (err) {
+      console.error("Microphone access denied", err);
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+    setRecording(false);
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <button
+        type="button"
+        onMouseDown={startRecording}
+        onMouseUp={stopRecording}
+        onMouseLeave={() => recording && stopRecording()}
+        onTouchStart={startRecording}
+        onTouchEnd={stopRecording}
+        disabled={disabled || responding}
+        className={`group w-full flex items-center gap-3 px-3 py-3 rounded-md border-2 border-black shadow-hard transition-all select-none ${
+          recording
+            ? "bg-red-950/60 border-red-500"
+            : responding
+            ? "bg-[#2a2a22] opacity-70 cursor-not-allowed"
+            : "bg-[#2a2a22] hover:bg-[#34342a]"
+        } disabled:opacity-40`}
+      >
+        <span
+          className={`shrink-0 w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${
+            recording
+              ? "bg-red-600 border-red-300 animate-pulse"
+              : responding
+              ? "bg-[#20201a] border-black"
+              : "bg-[#f7be1d] border-[#f7be1d] group-hover:scale-105 group-active:scale-95"
+          }`}
+          style={{ filter: !recording && !responding ? "drop-shadow(0 0 10px rgba(247,190,29,0.6))" : undefined }}
+        >
+          {responding ? (
+            <Loader2 className="w-5 h-5 animate-spin text-cream" />
+          ) : recording ? (
+            <MicOff className="w-5 h-5 text-white" />
+          ) : (
+            <Mic className="w-5 h-5 text-[#1a0800]" />
+          )}
+        </span>
+
+        <div className="flex-1 flex items-end gap-1 h-9">
+          {Array.from({ length: 16 }).map((_, i) => (
+            <span
+              key={i}
+              className={`flex-1 rounded-full transition-colors ${
+                recording ? "bg-red-400" : responding ? "bg-muted-foreground/40" : "bg-[#f7be1d]/70"
+              } ${recording || responding ? "animate-pulse" : ""}`}
+              style={{
+                height: recording || responding ? `${25 + ((i * 37) % 70)}%` : `${15 + ((i % 5) * 8)}%`,
+                animationDelay: `${i * 70}ms`,
+                animationDuration: "700ms",
+              }}
+            />
+          ))}
+        </div>
+
+        <span className="shrink-0 font-mono-label text-[9px] uppercase tracking-[0.25em] text-tertiary min-w-[70px] text-right">
+          {responding ? "Thinking" : recording ? "Release" : "Hold · Speak"}
+        </span>
+      </button>
+      <audio ref={audioRef} hidden />
+    </div>
+  );
+}
