@@ -229,7 +229,10 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
             ⟢ Step {Math.min(currentStep + 1, TOTAL_STEPS)} of {TOTAL_STEPS} ⟣
           </p>
           <h2 className="font-serif text-2xl mt-2 mb-6 leading-snug">
-            The innkeeper sets down a steaming bowl. "Try it, traveler — and tell me, how does one say <em className="text-tertiary">'delicious'</em> in your tongue?"
+            {track === "speaking"
+              ? <>The innkeeper of <em className="text-tertiary">{location}</em> leans in. "Speak it aloud, traveler — how do you say <em className="text-tertiary">'delicious'</em> in your tongue?"</>
+              : <>The innkeeper sets down a steaming bowl. "Try it, traveler — and tell me, how does one say <em className="text-tertiary">'delicious'</em> in your tongue?"</>
+            }
           </h2>
 
           {track === "speaking" ? (
