@@ -68,7 +68,21 @@ export default function QuestRunner({ onExit }: { onExit?: () => void }) {
   // Gold "ascension" overlay — intensifies as steps progress
   const goldStrength = currentStep / TOTAL_STEPS; // 0 → 1
 
-  // Confetti sparkle positions for victory (stable per mount)
+  // Confetti pieces (victory)
+  const confetti = useMemo(
+    () => Array.from({ length: 80 }).map((_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      delay: Math.random() * 2,
+      duration: 2.8 + Math.random() * 2.5,
+      size: 6 + Math.random() * 10,
+      rot: Math.random() * 360,
+      color: ["#f7be1d", "#fde68a", "#4ade80", "#fb7185", "#a78bfa", "#38bdf8"][i % 6],
+    })),
+    [victory],
+  );
+
+  // Sparkle stars
   const sparkles = useMemo(
     () => Array.from({ length: 22 }).map((_, i) => ({
       id: i,
@@ -80,15 +94,47 @@ export default function QuestRunner({ onExit }: { onExit?: () => void }) {
     [victory],
   );
 
-  // Fire embers for lockout
+  // Golden birds soaring across the screen
+  const birds = useMemo(
+    () => Array.from({ length: 7 }).map((_, i) => ({
+      id: i,
+      top: 5 + Math.random() * 60,
+      delay: Math.random() * 3,
+      duration: 5 + Math.random() * 4,
+      size: 28 + Math.random() * 22,
+      flap: 0.35 + Math.random() * 0.35,
+    })),
+    [victory],
+  );
+
+  // Flowers floating upward
+  const flowers = useMemo(
+    () => Array.from({ length: 18 }).map((_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      delay: Math.random() * 4,
+      duration: 6 + Math.random() * 4,
+      size: 18 + Math.random() * 18,
+      emoji: ["🌸", "🌼", "🌺", "🌷", "💮", "🏵️"][i % 6],
+    })),
+    [victory],
+  );
+
+  // Fire embers (still used as ambient warmth around bed)
   const embers = useMemo(
-    () => Array.from({ length: 28 }).map((_, i) => ({
+    () => Array.from({ length: 18 }).map((_, i) => ({
       id: i,
       left: Math.random() * 100,
       delay: Math.random() * 3,
-      duration: 2.5 + Math.random() * 3,
-      size: 4 + Math.random() * 10,
+      duration: 3 + Math.random() * 3,
+      size: 4 + Math.random() * 8,
     })),
+    [isLockedOut],
+  );
+
+  // Cold breath puffs
+  const puffs = useMemo(
+    () => Array.from({ length: 6 }).map((_, i) => ({ id: i, delay: i * 0.6 })),
     [isLockedOut],
   );
 
