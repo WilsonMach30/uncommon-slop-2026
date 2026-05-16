@@ -99,7 +99,15 @@ function MapDashboard() {
   }
 
   const region = REGION_NAMES[(profile.current_region - 1) % REGION_NAMES.length];
-  const gateUnlocked = profile.proficiency_score >= 50;
+  const gateUnlocked = currentRegionXp >= REGION_GATE_THRESHOLD;
+
+  const handleGateClick = () => {
+    if (!gateUnlocked) {
+      toast.error("You must log more exploration hours in this region before challenging the Gatekeeper!");
+      return;
+    }
+    setGateModal(true);
+  };
   const locations = profile.interests.filter((i) => LOCATIONS[i]).slice(0, 4);
   const manaPct = Math.min(100, Math.round(((profile.map_energy ?? 0) / 100) * 100));
 
@@ -178,11 +186,11 @@ function MapDashboard() {
 
           {/* Region Exam Gate (top right) */}
           <button
-            onClick={() => setGateModal(true)}
-            className="absolute top-16 right-4 sm:top-20 sm:right-8 group"
+            onClick={handleGateClick}
+            className="absolute top-16 right-4 sm:top-20 sm:right-8 group transition-transform hover:scale-105"
           >
-            <div className={`panel-bark border-2 rounded-md px-3 py-2 flex items-center gap-2 ${
-              gateUnlocked ? "border-tertiary glow-gold" : "border-bark opacity-90"
+            <div className={`panel-bark border-2 rounded-md px-3 py-2 flex items-center gap-2 transition-all ${
+              gateUnlocked ? "border-tertiary glow-gold animate-pulse" : "border-bark opacity-90"
             }`}>
               <div className={`w-8 h-8 rounded flex items-center justify-center ${
                 gateUnlocked ? "bg-tertiary text-tertiary-foreground" : "bg-surface-low text-muted-foreground"
@@ -191,7 +199,9 @@ function MapDashboard() {
               </div>
               <div className="text-left leading-tight">
                 <p className="font-mono-label text-[9px] uppercase tracking-widest text-tertiary">Region Gate</p>
-                <p className="font-serif text-xs text-cream">{gateUnlocked ? "Ready" : `${profile.proficiency_score}/50`}</p>
+                <p className="font-serif text-xs text-cream">
+                  {gateUnlocked ? "Challenge Ready" : `${currentRegionXp}/${REGION_GATE_THRESHOLD}`}
+                </p>
               </div>
             </div>
           </button>
