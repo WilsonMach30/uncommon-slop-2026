@@ -224,16 +224,68 @@ export default function QuestRunner({ onExit }: { onExit?: () => void }) {
 
       {/* === Victory dialog === */}
       {victory && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6">
-          <div className="bg-[#20201a] border-2 border-[#f7be1d] shadow-[0_0_40px_rgba(247,190,29,0.5)] rounded-md p-8 max-w-md text-center">
-            <Trophy className="w-16 h-16 mx-auto text-[#f7be1d]" style={{ filter: "drop-shadow(0 0 12px rgba(247,190,29,0.8))" }} />
-            <h3 className="font-serif text-3xl mt-4 text-cream">Victory, Wanderer!</h3>
-            <p className="font-serif text-base text-muted-foreground mt-2">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 overflow-hidden animate-[fade-in_0.4s_ease-out]">
+          {/* radiant gold backdrop */}
+          <div
+            aria-hidden
+            className="absolute inset-0 animate-[fade-in_0.6s_ease-out]"
+            style={{
+              background:
+                "radial-gradient(circle at center, rgba(247,190,29,0.55) 0%, rgba(120,75,0,0.7) 45%, rgba(10,10,10,0.92) 100%)",
+            }}
+          />
+          {/* rotating god-rays */}
+          <div
+            aria-hidden
+            className="absolute inset-0 animate-[spin_18s_linear_infinite] opacity-60"
+            style={{
+              background:
+                "conic-gradient(from 0deg, transparent 0deg, rgba(247,190,29,0.35) 12deg, transparent 24deg, transparent 60deg, rgba(247,190,29,0.25) 72deg, transparent 84deg, transparent 120deg, rgba(247,190,29,0.3) 132deg, transparent 144deg, transparent 180deg, rgba(247,190,29,0.25) 192deg, transparent 204deg, transparent 240deg, rgba(247,190,29,0.3) 252deg, transparent 264deg, transparent 300deg, rgba(247,190,29,0.25) 312deg, transparent 324deg, transparent 360deg)",
+              maskImage: "radial-gradient(circle at center, black 10%, transparent 70%)",
+            }}
+          />
+          {/* floating sparkles */}
+          <div aria-hidden className="absolute inset-0 pointer-events-none">
+            {sparkles.map((s) => (
+              <Star
+                key={s.id}
+                className="absolute text-[#f7be1d]"
+                style={{
+                  left: `${s.left}%`,
+                  top: `${s.top}%`,
+                  width: s.size,
+                  height: s.size,
+                  fill: "#f7be1d",
+                  filter: "drop-shadow(0 0 6px rgba(247,190,29,0.9))",
+                  animation: `sparkle-float 2.6s ease-in-out ${s.delay}s infinite`,
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="relative bg-[#20201a] border-2 border-[#f7be1d] shadow-[0_0_60px_rgba(247,190,29,0.7)] rounded-md p-8 max-w-md text-center animate-[victory-pop_0.6s_cubic-bezier(0.34,1.56,0.64,1)]">
+            <div className="relative mx-auto w-20 h-20">
+              <div className="absolute inset-0 rounded-full bg-[#f7be1d]/30 animate-ping" />
+              <Trophy
+                className="relative w-20 h-20 text-[#f7be1d] animate-[trophy-bounce_1.4s_ease-in-out_infinite]"
+                style={{ filter: "drop-shadow(0 0 16px rgba(247,190,29,1))" }}
+              />
+            </div>
+            <h3 className="font-serif text-4xl mt-4 text-cream tracking-wide">
+              <span className="inline-block animate-[fade-in_0.6s_ease-out_0.2s_both]">Victory,</span>{" "}
+              <span className="inline-block text-[#f7be1d] animate-[fade-in_0.6s_ease-out_0.5s_both]">Wanderer!</span>
+            </h3>
+            <p className="font-serif text-base text-cream/80 mt-3 animate-[fade-in_0.6s_ease-out_0.8s_both]">
               The tavern erupts in cheers. You have mastered this round of conversation.
             </p>
+            <div className="flex items-center justify-center gap-2 mt-4 animate-[fade-in_0.6s_ease-out_1s_both]">
+              <Sparkles className="w-4 h-4 text-[#f7be1d]" />
+              <span className="font-mono-label text-xs uppercase tracking-[0.3em] text-[#f7be1d]">+ 50 XP · + 10 Gold</span>
+              <Sparkles className="w-4 h-4 text-[#f7be1d]" />
+            </div>
             <button
               onClick={resetAll}
-              className="mt-6 px-6 py-2.5 rounded border-2 border-black bg-[#f7be1d] text-[#1a0800] font-bold text-sm uppercase tracking-wider shadow-hard hover:-translate-y-0.5 transition-transform"
+              className="mt-6 px-6 py-2.5 rounded border-2 border-black bg-[#f7be1d] text-[#1a0800] font-bold text-sm uppercase tracking-wider shadow-hard hover:-translate-y-0.5 transition-transform animate-[fade-in_0.6s_ease-out_1.2s_both]"
             >
               Another Round
             </button>
@@ -241,19 +293,72 @@ export default function QuestRunner({ onExit }: { onExit?: () => void }) {
         </div>
       )}
 
-      {/* === Lockout modal === */}
+      {/* === Lockout / Tavern Cooldown — fire & embers === */}
       {isLockedOut && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-surface/85 backdrop-blur-md p-6">
-          <div className="max-w-lg text-center">
-            <p className="font-mono-label text-[10px] uppercase tracking-[0.4em] text-tertiary">⟢ Tavern Cooldown ⟣</p>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 overflow-hidden">
+          {/* dark blurred backdrop */}
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-surface/90 backdrop-blur-md animate-[fade-in_0.4s_ease-out]"
+          />
+          {/* heat haze gradient at the bottom */}
+          <div
+            aria-hidden
+            className="absolute inset-x-0 bottom-0 h-2/3 pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(ellipse at bottom, rgba(239,68,68,0.35) 0%, rgba(120,18,18,0.25) 30%, transparent 70%)",
+              animation: "heat-flicker 2.4s ease-in-out infinite",
+            }}
+          />
+          {/* rising embers */}
+          <div aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden">
+            {embers.map((e) => (
+              <span
+                key={e.id}
+                className="absolute bottom-0 rounded-full"
+                style={{
+                  left: `${e.left}%`,
+                  width: e.size,
+                  height: e.size,
+                  background:
+                    "radial-gradient(circle, #fde68a 0%, #f7be1d 40%, #ef4444 80%, transparent 100%)",
+                  filter: "blur(0.5px) drop-shadow(0 0 6px rgba(247,190,29,0.8))",
+                  animation: `ember-rise ${e.duration}s linear ${e.delay}s infinite`,
+                  opacity: 0,
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="relative max-w-lg text-center animate-[fade-in_0.6s_ease-out]">
+            {/* dancing flame icons */}
+            <div className="flex items-end justify-center gap-3 mb-4">
+              {[0, 1, 2].map((i) => (
+                <Flame
+                  key={i}
+                  className="text-[#ef4444]"
+                  style={{
+                    width: i === 1 ? 56 : 40,
+                    height: i === 1 ? 56 : 40,
+                    fill: "#f7be1d",
+                    color: "#ef4444",
+                    filter: "drop-shadow(0 0 14px rgba(239,68,68,0.9))",
+                    animation: `flame-dance ${1.2 + i * 0.3}s ease-in-out ${i * 0.15}s infinite`,
+                    transformOrigin: "bottom center",
+                  }}
+                />
+              ))}
+            </div>
+            <p className="font-mono-label text-[10px] uppercase tracking-[0.4em] text-[#ef4444]">⟢ Tavern Cooldown ⟣</p>
             <h3 className="font-serif text-3xl md:text-4xl mt-3 text-cream leading-snug">
               Your stamina is broken, Wanderer. You must recuperate before venturing back into the wilds.
             </h3>
             <div className="mt-8 inline-flex flex-col items-center gap-2">
               <span className="font-mono-label text-[10px] uppercase tracking-widest text-tertiary">Rest remaining</span>
               <span
-                className="font-serif text-7xl text-[#f7be1d] tabular-nums"
-                style={{ filter: "drop-shadow(0 0 12px rgba(247,190,29,0.6))" }}
+                className="font-serif text-7xl text-[#f7be1d] tabular-nums animate-[pulse_1.5s_ease-in-out_infinite]"
+                style={{ filter: "drop-shadow(0 0 16px rgba(247,190,29,0.8))" }}
               >
                 {String(Math.floor(lockoutRemaining / 60)).padStart(1, "0")}:{String(lockoutRemaining % 60).padStart(2, "0")}
               </span>
