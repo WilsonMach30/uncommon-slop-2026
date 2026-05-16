@@ -485,51 +485,85 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
   );
 }
 
-function SpeakingMicBar({ disabled }: { disabled?: boolean }) {
+function SpeakingMicBar({ disabled, location = "the tavern" }: { disabled?: boolean; location?: string }) {
   const [recording, setRecording] = useState(false);
   const [responding, setResponding] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [reply, setReply] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const sendAudio = async (blob: Blob) => {
+    setResponding(true);
+    setErrorMsg("");
+    try {
+      const form = new FormData();
+      form.append("audio", blob, "recording.webm");
+      form.append("location", location);
+
+      const res = await fetch("/api/voice-chat", { method: "POST", body: form });
+      const data = (await res.json()) as { transcript?: string; reply?: string; audio?: string; error?: string };
+      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+
+      setTranscript(data.transcript ?? "");
+      setReply(data.reply ?? "");
+
+      if (data.audio && audioRef.current) {
+        audioRef.current.src = `data:audio/mpeg;base64,${data.audio}`;
+        await audioRef.current.play().catch(() => { /* ignore autoplay errors */ });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Voice pipeline failed";
+      console.error("Voice pipeline error:", err);
+      setErrorMsg(msg);
+    } finally {
+      setResponding(false);
+    }
+  };
+
   const startRecording = async () => {
     if (disabled || recording || responding) return;
+    setErrorMsg("");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : MediaRecorder.isTypeSupported("audio/mp4")
+        ? "audio/mp4"
+        : undefined;
+
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       chunksRef.current = [];
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const form = new FormData();
-        form.append("audio", blob, "recording.webm");
-        setResponding(true);
-        try {
-          const res = await fetch("http://127.0.0.1:5000/respond-to-voice", { method: "POST", body: form });
-          if (!res.ok) throw new Error(await res.text());
-          const audioBlob = await res.blob();
-          const url = URL.createObjectURL(audioBlob);
-          if (audioRef.current) {
-            audioRef.current.src = url;
-            audioRef.current.play();
-          }
-        } catch (err) {
-          console.error("Voice pipeline error:", err);
-        } finally {
-          setResponding(false);
+        const blob = new Blob(chunksRef.current, { type: mimeType || "audio/webm" });
+        if (blob.size > 1000) {
+          await sendAudio(blob);
+        } else {
+          setErrorMsg("Hold the mic and speak — recording was too short.");
         }
       };
       mr.start();
       mediaRecorderRef.current = mr;
       setRecording(true);
     } catch (err) {
-      console.error("Microphone access denied", err);
+      const name = (err as { name?: string })?.name;
+      if (name === "NotAllowedError") setErrorMsg("Microphone permission denied. Enable it in your browser settings.");
+      else if (name === "NotFoundError") setErrorMsg("No microphone was found.");
+      else setErrorMsg("Could not access the microphone.");
+      console.error("Microphone error:", err);
     }
   };
 
   const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
     mediaRecorderRef.current = null;
     setRecording(false);
   };
@@ -591,6 +625,22 @@ function SpeakingMicBar({ disabled }: { disabled?: boolean }) {
           {responding ? "Thinking" : recording ? "Release" : "Hold · Speak"}
         </span>
       </button>
+
+      {transcript && (
+        <div className="px-3 py-2 rounded border-2 border-black bg-[#1a1a14]">
+          <p className="font-mono-label text-[9px] uppercase tracking-widest text-tertiary mb-1">You said</p>
+          <p className="font-serif text-sm text-cream/90 italic">"{transcript}"</p>
+        </div>
+      )}
+      {reply && (
+        <div className="px-3 py-2 rounded border-2 border-[#f7be1d]/60 bg-[#20201a] shadow-hard">
+          <p className="font-mono-label text-[9px] uppercase tracking-widest text-[#f7be1d] mb-1">The Innkeeper</p>
+          <p className="font-serif text-sm text-cream">{reply}</p>
+        </div>
+      )}
+      {errorMsg && (
+        <p className="font-mono-label text-[10px] uppercase tracking-wider text-red-400 text-center">{errorMsg}</p>
+      )}
       <audio ref={audioRef} hidden />
     </div>
   );
