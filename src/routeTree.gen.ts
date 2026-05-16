@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as QuestRouteImport } from './routes/quest'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiMusicRouteImport } from './routes/api/music'
 import { Route as ApiGenerateTurnRouteImport } from './routes/api/generate-turn'
 
 const QuestRoute = QuestRouteImport.update({
@@ -29,6 +30,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMusicRoute = ApiMusicRouteImport.update({
+  id: '/api/music',
+  path: '/api/music',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiGenerateTurnRoute = ApiGenerateTurnRouteImport.update({
   id: '/api/generate-turn',
   path: '/api/generate-turn',
@@ -40,12 +46,14 @@ export interface FileRoutesByFullPath {
   '/map': typeof MapRoute
   '/quest': typeof QuestRoute
   '/api/generate-turn': typeof ApiGenerateTurnRoute
+  '/api/music': typeof ApiMusicRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/map': typeof MapRoute
   '/quest': typeof QuestRoute
   '/api/generate-turn': typeof ApiGenerateTurnRoute
+  '/api/music': typeof ApiMusicRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,14 @@ export interface FileRoutesById {
   '/map': typeof MapRoute
   '/quest': typeof QuestRoute
   '/api/generate-turn': typeof ApiGenerateTurnRoute
+  '/api/music': typeof ApiMusicRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/map' | '/quest' | '/api/generate-turn'
+  fullPaths: '/' | '/map' | '/quest' | '/api/generate-turn' | '/api/music'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/map' | '/quest' | '/api/generate-turn'
-  id: '__root__' | '/' | '/map' | '/quest' | '/api/generate-turn'
+  to: '/' | '/map' | '/quest' | '/api/generate-turn' | '/api/music'
+  id: '__root__' | '/' | '/map' | '/quest' | '/api/generate-turn' | '/api/music'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +76,7 @@ export interface RootRouteChildren {
   MapRoute: typeof MapRoute
   QuestRoute: typeof QuestRoute
   ApiGenerateTurnRoute: typeof ApiGenerateTurnRoute
+  ApiMusicRoute: typeof ApiMusicRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -92,6 +102,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/music': {
+      id: '/api/music'
+      path: '/api/music'
+      fullPath: '/api/music'
+      preLoaderRoute: typeof ApiMusicRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/generate-turn': {
       id: '/api/generate-turn'
       path: '/api/generate-turn'
@@ -107,7 +124,18 @@ const rootRouteChildren: RootRouteChildren = {
   MapRoute: MapRoute,
   QuestRoute: QuestRoute,
   ApiGenerateTurnRoute: ApiGenerateTurnRoute,
+  ApiMusicRoute: ApiMusicRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
