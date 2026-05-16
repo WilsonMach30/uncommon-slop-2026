@@ -132,12 +132,6 @@ export default function QuestRunner({ onExit }: { onExit?: () => void }) {
     [isLockedOut],
   );
 
-  // Cold breath puffs
-  const puffs = useMemo(
-    () => Array.from({ length: 6 }).map((_, i) => ({ id: i, delay: i * 0.6 })),
-    [isLockedOut],
-  );
-
   return (
     <div className={`relative min-h-screen bg-surface text-cream overflow-hidden ${shake ? "animate-[shake_0.35s_ease-in-out]" : ""}`}>
       {/* === Gold progressive ascension overlay === */}
