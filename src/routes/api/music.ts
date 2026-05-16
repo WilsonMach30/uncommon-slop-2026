@@ -14,6 +14,20 @@ const THEME_PROMPTS: Record<string, string> = {
   intro: "Mystical fantasy intro theme, ethereal female choir, deep horns, sense of beginning an epic journey, mid slow, loopable",
 };
 
+function json(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+  });
+}
+
+function publicMusicUrl(path: string) {
+  const supabaseUrl = process.env.SUPABASE_URL ?? import.meta.env.VITE_SUPABASE_URL;
+  if (!supabaseUrl) return null;
+  const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+  return `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/${BUCKET}/${encodedPath}`;
+}
+
 async function generateMusic(prompt: string, durationSeconds: number): Promise<ArrayBuffer> {
   const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
   if (!ELEVENLABS_API_KEY) throw new Error("ELEVENLABS_API_KEY not configured");
@@ -41,27 +55,23 @@ export const Route = createFileRoute("/api/music")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const url = new URL(request.url);
         const theme = (url.searchParams.get("theme") ?? "map").toLowerCase();
         const prompt = THEME_PROMPTS[theme];
         if (!prompt) {
-          return new Response(JSON.stringify({ error: "Unknown theme" }), {
-            status: 400,
-            headers: { "Content-Type": "application/json" },
-          });
+          return json({ error: "Unknown theme" }, 400);
         }
 
         const path = `${theme}.mp3`;
-        const publicUrl = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+        const publicUrl = publicMusicUrl(path);
+        if (!publicUrl) {
+          return json({ url: null, available: false, cached: false });
+        }
 
         // Check if already cached
         const headRes = await fetch(publicUrl, { method: "HEAD" });
         if (headRes.ok) {
-          return new Response(JSON.stringify({ url: publicUrl, cached: true }), {
-            status: 200,
-            headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-          });
+          return json({ url: publicUrl, available: true, cached: true });
         }
 
         // Generate, then upload
@@ -69,20 +79,15 @@ export const Route = createFileRoute("/api/music")({
           const duration =
             theme === "quest-victory" ? 12 : theme === "quest-lockout" ? 25 : 35;
           const audio = await generateMusic(prompt, duration);
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           const { error: upErr } = await supabaseAdmin.storage
             .from(BUCKET)
             .upload(path, audio, { contentType: "audio/mpeg", upsert: true });
           if (upErr) throw upErr;
-          return new Response(JSON.stringify({ url: publicUrl, cached: false }), {
-            status: 200,
-            headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-          });
+          return json({ url: publicUrl, available: true, cached: false });
         } catch (e: unknown) {
-          const msg = e instanceof Error ? e.message : String(e);
-          return new Response(JSON.stringify({ error: msg }), {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-          });
+          console.warn("Background music unavailable", e);
+          return json({ url: null, available: false, cached: false });
         }
       },
     },
