@@ -48,13 +48,20 @@ function MapDashboard() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeLocation, setActiveLocation] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
   const [gateModal, setGateModal] = useState(false);
+  const [activeTrack, setActiveTrack] = useState<{ track: string; location: string; input: string } | null>(null);
+  const [currentRegionXp, setCurrentRegionXp] = useState(4);
+
+  // Feature 2: tracks active session time and pushes to user_engagement every 60s
+  const { progress, setProgress } = useSessionTracker(profile?.id ?? null);
 
   useEffect(() => {
     loadProfile().then((p) => {
       if (!p) navigate({ to: "/" });
-      else setProfile(p as Profile);
+      else {
+        setProfile(p as Profile);
+        setCurrentRegionXp((p as Profile).proficiency_score ?? 4);
+      }
     });
   }, [navigate]);
 
