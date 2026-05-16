@@ -250,4 +250,33 @@
     60% { transform: translateX(-6px); }
     80% { transform: translateX(6px); }
   }
+
+  @keyframes victory-pop {
+    0%   { transform: scale(0.5) rotate(-6deg); opacity: 0; }
+    60%  { transform: scale(1.08) rotate(2deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  @keyframes trophy-bounce {
+    0%, 100% { transform: translateY(0) rotate(-3deg); }
+    50%      { transform: translateY(-8px) rotate(3deg); }
+  }
+  @keyframes sparkle-float {
+    0%, 100% { transform: translateY(0) scale(1) rotate(0deg); opacity: 0.3; }
+    50%      { transform: translateY(-14px) scale(1.4) rotate(180deg); opacity: 1; }
+  }
+  @keyframes ember-rise {
+    0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+    10%  { opacity: 1; }
+    100% { transform: translateY(-110vh) translateX(40px) scale(0.3); opacity: 0; }
+  }
+  @keyframes flame-dance {
+    0%, 100% { transform: scaleY(1) scaleX(1) translateY(0); }
+    25%      { transform: scaleY(1.15) scaleX(0.9) translateY(-3px); }
+    50%      { transform: scaleY(0.92) scaleX(1.08) translateY(2px); }
+    75%      { transform: scaleY(1.1) scaleX(0.95) translateY(-2px); }
+  }
+  @keyframes heat-flicker {
+    0%, 100% { opacity: 0.7; }
+    50%      { opacity: 1; }
+  }
 }
