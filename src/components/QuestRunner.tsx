@@ -236,7 +236,7 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
           </h2>
 
           {track === "speaking" ? (
-            <SpeakingMicBar disabled={isLockedOut || victory} />
+            <SpeakingMicBar disabled={isLockedOut || victory} location={location} />
           ) : (
             <div className="grid gap-3">
               {["Délicieux", "Effrayant", "Ennuyeux", "Coûteux"].map((opt, i) => (
