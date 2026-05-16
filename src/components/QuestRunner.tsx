@@ -38,6 +38,12 @@ export default function QuestRunner({ onExit }: { onExit?: () => void }) {
     return () => clearInterval(id);
   }, [isLockedOut]);
 
+  // Sync music to game state: quest / quest-victory / quest-lockout
+  useEffect(() => {
+    const theme = victory ? "quest-victory" : isLockedOut ? "quest-lockout" : "quest";
+    window.dispatchEvent(new CustomEvent("dwa:music-theme", { detail: { theme } }));
+  }, [victory, isLockedOut]);
+
   const onCorrect = () => {
     if (isLockedOut || victory) return;
     setCurrentStep((s) => {
