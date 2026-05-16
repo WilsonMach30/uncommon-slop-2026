@@ -41,6 +41,7 @@ export const Route = createFileRoute("/api/music")({
   server: {
     handlers: {
       GET: async ({ request }) => {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const url = new URL(request.url);
         const theme = (url.searchParams.get("theme") ?? "map").toLowerCase();
         const prompt = THEME_PROMPTS[theme];
