@@ -46,7 +46,8 @@ async function resolveThemeUrl(theme: Theme): Promise<string> {
   }
   const res = await fetch(`/api/music?theme=${encodeURIComponent(theme)}`);
   if (!res.ok) throw new Error(`music api ${res.status}`);
-  const json = (await res.json()) as { url: string };
+  const json = (await res.json()) as { url: string | null; available?: boolean };
+  if (!json.url) throw new Error("music unavailable");
   urlCache.set(theme, json.url);
   try { localStorage.setItem(lsKey, json.url); } catch { /* ignore */ }
   return json.url;
