@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Heart, Check, X, Trophy, ArrowLeft, Sparkles, Star } from "lucide-react";
+import { Heart, Check, X, Trophy, ArrowLeft, Flame, Sparkles, Star } from "lucide-react";
 
 const TOTAL_STEPS = 5;
 const LOCKOUT_SECONDS = 30;
@@ -37,6 +37,12 @@ export default function QuestRunner({ onExit }: { onExit?: () => void }) {
     }, 1000);
     return () => clearInterval(id);
   }, [isLockedOut]);
+
+  // Sync music to game state: quest / quest-victory / quest-lockout
+  useEffect(() => {
+    const theme = victory ? "quest-victory" : isLockedOut ? "quest-lockout" : "quest";
+    window.dispatchEvent(new CustomEvent("dwa:music-theme", { detail: { theme } }));
+  }, [victory, isLockedOut]);
 
   const onCorrect = () => {
     if (isLockedOut || victory) return;
@@ -129,12 +135,6 @@ export default function QuestRunner({ onExit }: { onExit?: () => void }) {
       duration: 3 + Math.random() * 3,
       size: 4 + Math.random() * 8,
     })),
-    [isLockedOut],
-  );
-
-  // Cold breath puffs
-  const puffs = useMemo(
-    () => Array.from({ length: 6 }).map((_, i) => ({ id: i, delay: i * 0.6 })),
     [isLockedOut],
   );
 
@@ -401,41 +401,37 @@ export default function QuestRunner({ onExit }: { onExit?: () => void }) {
         </div>
       )}
 
-      {/* === Lockout — shivering in bed, being fed === */}
+      {/* === Lockout / Tavern Cooldown — fire & embers === */}
       {isLockedOut && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 overflow-hidden">
-          {/* cold blue night backdrop */}
+          {/* dark blurred backdrop */}
           <div
             aria-hidden
-            className="absolute inset-0 animate-[fade-in_0.5s_ease-out]"
-            style={{
-              background:
-                "radial-gradient(ellipse at center, rgba(30,58,95,0.7) 0%, rgba(8,15,30,0.96) 70%)",
-            }}
+            className="absolute inset-0 bg-surface/90 backdrop-blur-md animate-[fade-in_0.4s_ease-out]"
           />
-          {/* faint warm hearth glow from side */}
+          {/* heat haze gradient at the bottom */}
           <div
             aria-hidden
-            className="absolute inset-y-0 right-0 w-1/2 pointer-events-none"
+            className="absolute inset-x-0 bottom-0 h-2/3 pointer-events-none"
             style={{
               background:
-                "radial-gradient(ellipse at right, rgba(247,140,40,0.18) 0%, transparent 60%)",
+                "radial-gradient(ellipse at bottom, rgba(239,68,68,0.35) 0%, rgba(120,18,18,0.25) 30%, transparent 70%)",
               animation: "heat-flicker 2.4s ease-in-out infinite",
             }}
           />
-          {/* a few embers drifting up from hearth */}
+          {/* rising embers */}
           <div aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden">
             {embers.map((e) => (
               <span
                 key={e.id}
                 className="absolute bottom-0 rounded-full"
                 style={{
-                  left: `${60 + (e.left % 40)}%`,
+                  left: `${e.left}%`,
                   width: e.size,
                   height: e.size,
                   background:
                     "radial-gradient(circle, #fde68a 0%, #f7be1d 40%, #ef4444 80%, transparent 100%)",
-                  filter: "blur(0.5px) drop-shadow(0 0 6px rgba(247,190,29,0.7))",
+                  filter: "blur(0.5px) drop-shadow(0 0 6px rgba(247,190,29,0.8))",
                   animation: `ember-rise ${e.duration}s linear ${e.delay}s infinite`,
                   opacity: 0,
                 }}
@@ -443,97 +439,33 @@ export default function QuestRunner({ onExit }: { onExit?: () => void }) {
             ))}
           </div>
 
-          <div className="relative max-w-lg w-full text-center animate-[fade-in_0.6s_ease-out]">
-            <p className="font-mono-label text-[10px] uppercase tracking-[0.4em] text-[#7dd3fc]">⟢ Bedridden ⟣</p>
-            <h3 className="font-serif text-2xl md:text-3xl mt-2 text-cream leading-snug">
-              You have collapsed, Wanderer. The innkeeper tucks you in and spoons broth between your shivers.
-            </h3>
-
-            {/* The bed scene */}
-            <div className="relative mx-auto mt-8 w-[300px] h-[180px]">
-              {/* breath puffs above the patient */}
-              {puffs.map((p) => (
-                <span
-                  key={p.id}
-                  aria-hidden
-                  className="absolute text-white/70"
+          <div className="relative max-w-lg text-center animate-[fade-in_0.6s_ease-out]">
+            {/* dancing flame icons */}
+            <div className="flex items-end justify-center gap-3 mb-4">
+              {[0, 1, 2].map((i) => (
+                <Flame
+                  key={i}
+                  className="text-[#ef4444]"
                   style={{
-                    left: 92,
-                    top: 18,
-                    fontSize: 22,
-                    animation: `breath-puff 2.4s ease-out ${p.delay}s infinite`,
+                    width: i === 1 ? 56 : 40,
+                    height: i === 1 ? 56 : 40,
+                    fill: "#f7be1d",
+                    color: "#ef4444",
+                    filter: "drop-shadow(0 0 14px rgba(239,68,68,0.9))",
+                    animation: `flame-dance ${1.2 + i * 0.3}s ease-in-out ${i * 0.15}s infinite`,
+                    transformOrigin: "bottom center",
                   }}
-                >
-                  ❄
-                </span>
+                />
               ))}
-
-              {/* patient (head + body shivering together) */}
-              <div
-                className="absolute left-4 bottom-4"
-                style={{ animation: "shiver 0.25s linear infinite" }}
-              >
-                {/* pillow */}
-                <div className="absolute -left-2 bottom-16 w-16 h-8 bg-[#e8d3a3] border-2 border-black rounded-md shadow-hard-sm" />
-                {/* head */}
-                <div className="absolute left-2 bottom-20 text-5xl" style={{ filter: "drop-shadow(0 0 4px rgba(125,211,252,0.6))" }}>
-                  🥶
-                </div>
-                {/* blanket / body */}
-                <div className="relative w-48 h-10 bg-gradient-to-b from-[#b91c1c] to-[#7f1d1d] border-2 border-black rounded-t-2xl shadow-hard" />
-                {/* bed frame */}
-                <div className="relative w-52 h-4 bg-[#5c2c12] border-2 border-black -ml-2 shadow-hard-sm" />
-                <div className="absolute -bottom-3 left-0 w-2 h-6 bg-[#3b1300] border-2 border-black" />
-                <div className="absolute -bottom-3 right-0 w-2 h-6 bg-[#3b1300] border-2 border-black" />
-              </div>
-
-              {/* innkeeper feeding spoon (from the right) */}
-              <div
-                className="absolute right-2 bottom-16 flex items-end gap-1"
-              >
-                {/* steam from soup */}
-                <div className="relative">
-                  <span
-                    aria-hidden
-                    className="absolute -top-2 left-2 text-base text-white/70"
-                    style={{ animation: "steam-rise 2s ease-out 0s infinite" }}
-                  >
-                    ◌
-                  </span>
-                  <span
-                    aria-hidden
-                    className="absolute -top-2 left-5 text-base text-white/70"
-                    style={{ animation: "steam-rise 2s ease-out 0.7s infinite" }}
-                  >
-                    ◌
-                  </span>
-                  <span
-                    aria-hidden
-                    className="absolute -top-2 left-8 text-base text-white/70"
-                    style={{ animation: "steam-rise 2s ease-out 1.3s infinite" }}
-                  >
-                    ◌
-                  </span>
-                  {/* bowl */}
-                  <div className="text-4xl">🍲</div>
-                </div>
-                {/* spoon — moves toward patient's mouth */}
-                <div
-                  className="text-3xl"
-                  style={{
-                    animation: "spoon-feed 3s ease-in-out infinite",
-                    transformOrigin: "right center",
-                  }}
-                >
-                  🥄
-                </div>
-              </div>
             </div>
-
-            <div className="mt-6 inline-flex flex-col items-center gap-2">
-              <span className="font-mono-label text-[10px] uppercase tracking-widest text-tertiary">Recovery in</span>
+            <p className="font-mono-label text-[10px] uppercase tracking-[0.4em] text-[#ef4444]">⟢ Tavern Cooldown ⟣</p>
+            <h3 className="font-serif text-3xl md:text-4xl mt-3 text-cream leading-snug">
+              Your stamina is broken, Wanderer. You must recuperate before venturing back into the wilds.
+            </h3>
+            <div className="mt-8 inline-flex flex-col items-center gap-2">
+              <span className="font-mono-label text-[10px] uppercase tracking-widest text-tertiary">Rest remaining</span>
               <span
-                className="font-serif text-6xl text-[#f7be1d] tabular-nums animate-[pulse_1.5s_ease-in-out_infinite]"
+                className="font-serif text-7xl text-[#f7be1d] tabular-nums animate-[pulse_1.5s_ease-in-out_infinite]"
                 style={{ filter: "drop-shadow(0 0 16px rgba(247,190,29,0.8))" }}
               >
                 {String(Math.floor(lockoutRemaining / 60)).padStart(1, "0")}:{String(lockoutRemaining % 60).padStart(2, "0")}
