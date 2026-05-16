@@ -1,22 +1,38 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Megaphone, Feather, BookOpen, X, Sparkles, Flame } from "lucide-react";
 import { logEngagement } from "@/lib/profile";
 
 type Loc = { name: string; subtitle: string; icon: any; tagline: string };
 
 const TRACKS = [
-  { id: "speaking", label: "Speaking", sub: "Voice Quest", icon: Megaphone, desc: "Talk to the locals." },
-  { id: "writing",  label: "Writing",  sub: "Runic Inscription", icon: Feather, desc: "Scribe a tale." },
-  { id: "reading",  label: "Reading",  sub: "Scroll Deciphering", icon: BookOpen, desc: "Decipher the runes." },
+  { id: "speaking", label: "Speaking Track", sub: "Voice Quest",         icon: Megaphone, desc: "Talk to the locals." },
+  { id: "reading",  label: "Reading Track",  sub: "Scroll Deciphering",  icon: BookOpen,  desc: "Decipher the runes." },
+  { id: "writing",  label: "Writing Track",  sub: "Runic Inscription",   icon: Feather,   desc: "Scribe a tale." },
 ];
 
 export default function QuestPanel({
-  location, onClose, profileId, progress,
+  location, onClose, profileId, progress, onStartTrack,
 }: {
-  location: Loc; onClose: () => void; profileId: string; progress: number;
+  location: Loc;
+  onClose: () => void;
+  profileId: string;
+  progress: number;
+  onStartTrack: (track: string, input: string) => void;
 }) {
   const [input, setInput] = useState("");
   const [chosen, setChosen] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // trigger enter animation
+    const t = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(t);
+  }, []);
+
+  const handleClose = () => {
+    setMounted(false);
+    setTimeout(onClose, 200);
+  };
 
   const start = async (track: string) => {
     setChosen(track);
@@ -29,31 +45,45 @@ export default function QuestPanel({
     });
   };
 
+  const launch = () => {
+    if (!chosen) return;
+    onStartTrack(chosen, input);
+    handleClose();
+  };
+
   const Icon = location.icon;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
+    <div
+      className={`fixed inset-0 z-50 bg-black/80 transition-opacity duration-200 flex items-end justify-center ${mounted ? "opacity-100" : "opacity-0"}`}
+      onClick={handleClose}
+    >
       <div
-        className="panel-bark border-2 border-tertiary rounded-xl shadow-panel max-w-lg w-full my-8 glow-gold"
+        className={`panel-bark border-t-4 border-x-4 border-tertiary rounded-t-2xl shadow-panel max-w-lg w-full max-h-[90vh] overflow-y-auto glow-gold transform transition-transform duration-300 ${
+          mounted ? "translate-y-0" : "translate-y-full"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative px-6 pt-8 pb-5 text-center border-b-2 border-bark">
-          <button onClick={onClose} className="absolute top-3 right-3 p-2 rounded-full hover:bg-surface-low text-muted-foreground">
+        {/* Drag handle */}
+        <div className="pt-2 pb-1 flex justify-center">
+          <div className="w-12 h-1.5 rounded-full bg-tertiary/60" />
+        </div>
+
+        <div className="relative px-6 pt-4 pb-5 text-center border-b-2 border-bark">
+          <button onClick={handleClose} className="absolute top-3 right-3 p-2 rounded-full hover:bg-surface-low text-muted-foreground">
             <X className="w-4 h-4" />
           </button>
           <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-primary-container border-2 border-primary flex items-center justify-center text-primary glow-emerald">
             <Icon className="w-6 h-6" />
           </div>
           <p className="font-mono-label text-[10px] uppercase tracking-[0.4em] text-tertiary mb-1">{location.subtitle}</p>
-          <h2 className="font-serif text-2xl sm:text-3xl leading-tight">Trial of the<br/><span className="text-tertiary">{location.name}</span></h2>
-          <p className="text-muted-foreground text-xs mt-3">
-            Choose your method of deciphering. The path you select dictates the trials ahead.
+          <h2 className="font-serif text-2xl sm:text-3xl leading-tight">
+            Welcome to the<br/>
+            <span className="text-tertiary">{location.name}</span>
+          </h2>
+          <p className="text-muted-foreground text-xs mt-3 italic font-serif">
+            "{location.tagline}" — choose your path, traveler.
           </p>
-          <div className="flex items-center justify-center gap-2 mt-4">
-            <div className="h-px w-12 bg-bark" />
-            <span className="text-tertiary text-xs">✦</span>
-            <div className="h-px w-12 bg-bark" />
-          </div>
         </div>
 
         <div className="px-6 py-6 space-y-5">
@@ -120,6 +150,7 @@ export default function QuestPanel({
 
           <button
             disabled={!chosen}
+            onClick={launch}
             className="w-full flex items-center justify-center gap-2 bg-tertiary text-tertiary-foreground font-serif rounded-full py-3 border-2 border-tertiary-container glow-gold disabled:opacity-40 disabled:glow-gold transition-all"
           >
             <Flame className="w-4 h-4" /> Commence Trial
