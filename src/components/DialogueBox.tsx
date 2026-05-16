@@ -114,27 +114,6 @@ export default function DialogueBox({
           </button>
         </div>
 
-        {/* Audio equalizer (speaking only) */}
-        {isSpeaking && (
-          <div className="px-5 pt-4 flex items-center gap-3">
-            <Volume2 className="w-4 h-4 text-primary" />
-            <div className="flex items-end gap-1 h-6">
-              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                <span
-                  key={i}
-                  className="w-1.5 bg-primary rounded-full animate-pulse"
-                  style={{
-                    height: `${30 + (i % 4) * 18}%`,
-                    animationDelay: `${i * 90}ms`,
-                    animationDuration: "900ms",
-                  }}
-                />
-              ))}
-            </div>
-            <span className="font-mono-label text-[10px] uppercase tracking-widest text-primary">Live audio</span>
-          </div>
-        )}
-
         {/* Dialogue text — classic RPG box */}
         <div className="px-5 py-5">
           <div className="panel-carved rounded-md border-2 border-bark p-4 sm:p-5 min-h-[120px]">
@@ -145,35 +124,69 @@ export default function DialogueBox({
           </div>
         </div>
 
-        {/* Voice record button */}
-        <div className="px-5 pb-4 flex flex-col items-center gap-2">
-          <button
-            onMouseDown={startRecording}
-            onMouseUp={stopRecording}
-            onTouchStart={startRecording}
-            onTouchEnd={stopRecording}
-            disabled={responding}
-            className={`w-16 h-16 rounded-full border-4 flex items-center justify-center transition-all select-none ${
-              recording
-                ? "bg-red-600 border-red-400 scale-110 animate-pulse"
-                : responding
-                ? "bg-surface-low border-bark cursor-not-allowed"
-                : "bg-tertiary border-tertiary-container glow-gold hover:scale-105 active:scale-95"
-            }`}
-          >
-            {responding ? (
-              <Loader2 className="w-7 h-7 animate-spin text-cream" />
-            ) : recording ? (
-              <MicOff className="w-7 h-7 text-white" />
-            ) : (
-              <Mic className="w-7 h-7 text-tertiary-foreground" />
-            )}
-          </button>
-          <p className="font-mono-label text-[10px] uppercase tracking-widest text-muted-foreground">
-            {responding ? "Thinking…" : recording ? "Release to send" : "Hold to speak"}
-          </p>
-          <audio ref={responseAudioRef} hidden />
-        </div>
+        {/* Speaking track — unified mic + equalizer bar */}
+        {isSpeaking && (
+          <div className="px-5 pb-4">
+            <button
+              onMouseDown={startRecording}
+              onMouseUp={stopRecording}
+              onTouchStart={startRecording}
+              onTouchEnd={stopRecording}
+              disabled={responding}
+              className={`group w-full flex items-center gap-3 px-3 py-3 panel-carved rounded-md border-2 transition-all select-none ${
+                recording
+                  ? "border-red-500 bg-red-950/40"
+                  : responding
+                  ? "border-bark opacity-70 cursor-not-allowed"
+                  : "border-bark hover:border-tertiary"
+              }`}
+            >
+              {/* Inline mic affordance */}
+              <span
+                className={`shrink-0 w-11 h-11 rounded-full border-2 flex items-center justify-center transition-all ${
+                  recording
+                    ? "bg-red-600 border-red-300 animate-pulse"
+                    : responding
+                    ? "bg-surface-low border-bark"
+                    : "bg-tertiary border-tertiary-container glow-gold group-hover:scale-105 group-active:scale-95"
+                }`}
+              >
+                {responding ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-cream" />
+                ) : recording ? (
+                  <MicOff className="w-5 h-5 text-white" />
+                ) : (
+                  <Mic className="w-5 h-5 text-tertiary-foreground" />
+                )}
+              </span>
+
+              {/* Equalizer doubles as live-audio feedback */}
+              <div className="flex-1 flex items-end gap-1 h-8">
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((i) => (
+                  <span
+                    key={i}
+                    className={`flex-1 rounded-full transition-colors ${
+                      recording ? "bg-red-400" : responding ? "bg-muted-foreground/40" : "bg-tertiary/70"
+                    } ${recording || responding ? "animate-pulse" : ""}`}
+                    style={{
+                      height: recording || responding
+                        ? `${25 + ((i * 37) % 70)}%`
+                        : `${15 + ((i % 5) * 8)}%`,
+                      animationDelay: `${i * 70}ms`,
+                      animationDuration: "700ms",
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Status label */}
+              <span className="shrink-0 font-mono-label text-[9px] uppercase tracking-[0.25em] text-tertiary min-w-[64px] text-right">
+                {responding ? "Thinking" : recording ? "Release" : "Hold · Speak"}
+              </span>
+            </button>
+            <audio ref={responseAudioRef} hidden />
+          </div>
+        )}
 
         {/* Choices */}
         <div className="px-5 pb-5 grid gap-2">
