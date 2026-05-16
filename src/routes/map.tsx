@@ -103,6 +103,14 @@ function MapDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
 
+  // Sync background music to active tab
+  useEffect(() => {
+    const themeMap: Record<TabKey, string> = {
+      map: "map", quests: "quests", lore: "lore", armory: "armory", me: "me",
+    };
+    window.dispatchEvent(new CustomEvent("dwa:music-theme", { detail: { theme: themeMap[tab] } }));
+  }, [tab]);
+
   if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -284,14 +292,85 @@ function MapViewport({
     <div className="relative flex-1 overflow-hidden parchment-inset">
       <img src={forestMap} alt="Region map of an enchanted forest" className="absolute inset-0 w-full h-full object-cover animate-bg-drift" />
       <div className="absolute inset-0 bg-gradient-to-b from-surface/40 via-transparent to-surface/80" />
-      {/* Drifting sparkle motes */}
+
+      {/* Drifting clouds */}
+      <div aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden">
+        {[
+          { top: "8%",  size: 90,  dur: 60, delay: 0,   opacity: 0.18 },
+          { top: "22%", size: 140, dur: 90, delay: -30, opacity: 0.13 },
+          { top: "55%", size: 70,  dur: 75, delay: -50, opacity: 0.10 },
+        ].map((c, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-cream blur-2xl"
+            style={{
+              top: c.top, left: 0, width: c.size, height: c.size * 0.5,
+              opacity: c.opacity,
+              animation: `cloud-drift ${c.dur}s linear ${c.delay}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Fireflies */}
+      <div aria-hidden className="absolute inset-0 pointer-events-none">
+        {Array.from({ length: 14 }).map((_, i) => {
+          const left = (i * 73) % 100;
+          const top = (i * 41 + 13) % 90;
+          const dur = 6 + ((i * 1.7) % 7);
+          const delay = (i * 0.6) % 5;
+          const size = 4 + (i % 4);
+          return (
+            <span
+              key={i}
+              className="absolute rounded-full"
+              style={{
+                left: `${left}%`, top: `${top}%`,
+                width: size, height: size,
+                background: "radial-gradient(circle, #fff7c2 0%, #f7be1d 60%, transparent 80%)",
+                boxShadow: "0 0 12px rgba(247,190,29,0.9)",
+                animation: `firefly ${dur}s ease-in-out ${delay}s infinite`,
+              }}
+            />
+          );
+        })}
+      </div>
+
+      {/* Falling leaves */}
+      <div aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden">
+        {Array.from({ length: 7 }).map((_, i) => {
+          const left = (i * 17 + 5) % 95;
+          const dur = 10 + ((i * 2.1) % 8);
+          const delay = (i * 1.7) % 9;
+          const emoji = ["🍂", "🍃", "🌿"][i % 3];
+          return (
+            <span
+              key={i}
+              className="absolute top-0 text-xl"
+              style={{
+                left: `${left}%`,
+                animation: `leaf-fall ${dur}s linear ${delay}s infinite`,
+                opacity: 0.7,
+                filter: "drop-shadow(0 0 4px rgba(0,0,0,0.4))",
+              }}
+            >
+              {emoji}
+            </span>
+          );
+        })}
+      </div>
+
+
+
+      {/* Existing sparkle motes */}
       <span className="absolute top-[20%] left-[15%] text-tertiary animate-twinkle"><Sparkles className="w-3 h-3" /></span>
       <span className="absolute top-[35%] right-[20%] text-tertiary animate-twinkle" style={{ animationDelay: "0.8s" }}><Sparkles className="w-2.5 h-2.5" /></span>
       <span className="absolute bottom-[30%] left-[40%] text-tertiary animate-twinkle" style={{ animationDelay: "1.6s" }}><Sparkles className="w-3 h-3" /></span>
 
       <div className="absolute top-4 left-1/2 -translate-x-1/2 panel-bark border-2 border-tertiary/40 rounded-full px-4 py-1.5">
         <p className="font-mono-label text-[10px] uppercase tracking-[0.35em] text-tertiary flex items-center gap-2">
-          <Compass className="w-3 h-3" /> Region {profile.current_region} ·{" "}
+          <Compass className="w-3 h-3" style={{ animation: "needle-sway 4s ease-in-out infinite", transformOrigin: "center" }} />
+          Region {profile.current_region} ·{" "}
           <span className="font-serif text-cream normal-case tracking-normal">{region}</span>
         </p>
       </div>
@@ -328,7 +407,18 @@ function MapViewport({
             style={{ top: loc.pos.top, left: loc.pos.left, animationDelay: `${idx * 0.4}s` }}
           >
             <div className="relative">
-              <div className="w-14 h-14 rounded-full bg-primary-container border-2 border-tertiary flex items-center justify-center text-tertiary glow-emerald group-hover:scale-110 transition-transform">
+              {/* expanding aura rings */}
+              <span
+                aria-hidden
+                className="absolute inset-0 rounded-full border-2 border-tertiary"
+                style={{ animation: `aura-pulse 2.8s ease-out ${idx * 0.4}s infinite` }}
+              />
+              <span
+                aria-hidden
+                className="absolute inset-0 rounded-full border-2 border-tertiary/70"
+                style={{ animation: `aura-pulse 2.8s ease-out ${idx * 0.4 + 1.4}s infinite` }}
+              />
+              <div className="relative w-14 h-14 rounded-full bg-primary-container border-2 border-tertiary flex items-center justify-center text-tertiary glow-emerald group-hover:scale-110 transition-transform">
                 <Icon className="w-6 h-6" />
               </div>
               <div className="absolute left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap">
@@ -347,7 +437,7 @@ function MapViewport({
           <p className="font-mono-label text-[10px] text-cream">{progress}%</p>
         </div>
         <div className="h-2.5 rounded-full bg-surface-low border border-bark overflow-hidden">
-          <div className="h-full vial-bar transition-all" style={{ width: `${progress}%` }} />
+          <div className="h-full vial-bar transition-all animate-shimmer" style={{ width: `${progress}%` }} />
         </div>
         <p className="text-[10px] text-muted-foreground mt-2 font-mono-label">
           Grows with time spent · mistakes never punish you

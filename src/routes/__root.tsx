@@ -10,6 +10,7 @@ import {
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
+import BackgroundMusic from "@/components/BackgroundMusic";
 
 function NotFoundComponent() {
   return (
@@ -119,6 +120,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <BackgroundMusic />
       <Toaster theme="dark" position="top-center" />
     </QueryClientProvider>
   );
