@@ -61,20 +61,67 @@ export default function QuestRunner({ onExit }: { onExit?: () => void }) {
     setIsLockedOut(false);
   };
 
-  // Vignette opacity
-  const vignetteOpacity = lives === 3 ? 0 : lives === 2 ? 0.15 : lives === 1 ? 0.4 : 0.55;
+  // Red damage vignette — darker, blood-oxide hue
+  const vignetteOpacity = lives === 3 ? 0 : lives === 2 ? 0.25 : lives === 1 ? 0.55 : 0.75;
   const vignettePulse = lives === 1;
+
+  // Gold "ascension" overlay — intensifies as steps progress
+  const goldStrength = currentStep / TOTAL_STEPS; // 0 → 1
+
+  // Confetti sparkle positions for victory (stable per mount)
+  const sparkles = useMemo(
+    () => Array.from({ length: 22 }).map((_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      delay: Math.random() * 1.2,
+      size: 8 + Math.random() * 18,
+    })),
+    [victory],
+  );
+
+  // Fire embers for lockout
+  const embers = useMemo(
+    () => Array.from({ length: 28 }).map((_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      delay: Math.random() * 3,
+      duration: 2.5 + Math.random() * 3,
+      size: 4 + Math.random() * 10,
+    })),
+    [isLockedOut],
+  );
 
   return (
     <div className={`relative min-h-screen bg-surface text-cream overflow-hidden ${shake ? "animate-[shake_0.35s_ease-in-out]" : ""}`}>
-      {/* === Red damage vignette === */}
+      {/* === Gold progressive ascension overlay === */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-[80] transition-opacity duration-700"
+        style={{
+          opacity: goldStrength * 0.75,
+          background:
+            "radial-gradient(ellipse at center, rgba(247,190,29,0.35) 0%, rgba(247,190,29,0.18) 40%, transparent 75%)",
+        }}
+      />
+      {/* Gold edge bloom that grows with progress */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-[81] transition-opacity duration-700"
+        style={{
+          opacity: goldStrength,
+          boxShadow: `inset 0 0 ${40 + goldStrength * 120}px ${10 + goldStrength * 40}px rgba(247,190,29,${0.25 + goldStrength * 0.45})`,
+        }}
+      />
+
+      {/* === Red damage vignette (darker oxblood) === */}
       <div
         aria-hidden
         className={`pointer-events-none fixed inset-0 z-[90] transition-opacity duration-500 ${vignettePulse ? "animate-pulse" : ""}`}
         style={{
           opacity: vignetteOpacity,
           background:
-            "radial-gradient(ellipse at center, transparent 35%, rgba(239,68,68,0.55) 80%, #ef4444 100%)",
+            "radial-gradient(ellipse at center, transparent 30%, rgba(120,18,18,0.7) 75%, #4a0a0a 100%)",
         }}
       />
 
