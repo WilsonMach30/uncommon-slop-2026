@@ -6,7 +6,7 @@ load_dotenv()
 
 LANGUAGE_NATIVE = "English"
 LANGUAGE_TARGET = "Spanish"
-LEVEL = "BEGINNER" #INTERMEDIATE ADVANCED
+LEVEL = "INTERMEDIATE" #INTERMEDIATE ADVANCED
 PAST_CONVO = [] #will be in database at some point
 CONVO_HISTORY = []
 
@@ -43,7 +43,7 @@ glm_init = (
 
 def qwen_directive(user_entry):
     response = wafer_client.chat.completions.create(
-        model=GLM_MODEL,
+        model=QWEN_MODEL,
         max_tokens=4096,
         messages=[
             {"role": "system", "content": qwen_context},
@@ -59,7 +59,7 @@ def qwen_directive(user_entry):
 def qwen_summary():
     global CONVO_HISTORY
     response = wafer_client.chat.completions.create(
-        model=GLM_MODEL,
+        model=QWEN_MODEL,
         max_tokens=4096,
         messages=[
             {"role": "system", "content": qwen_context},
@@ -75,7 +75,7 @@ def qwen_summary():
 
 def glm_input(directive, user_input=""):
     response = wafer_client.chat.completions.create(
-        model=QWEN_MODEL,
+        model=GLM_MODEL,
         max_tokens=4096,
         messages=[
             {"role": "system", "content": glm_context},
@@ -95,7 +95,7 @@ def glm_input(directive, user_input=""):
 def main():
     global NUM
     user_entry = input("USER ENTRY: ")
-    print("GLM START")
+    print("QWEN START")
     qwen_out = qwen_directive(user_entry)
     print(qwen_out)
     while True:
