@@ -13,7 +13,6 @@ import { Route as QuestRouteImport } from './routes/quest'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiVoiceChatRouteImport } from './routes/api/voice-chat'
-import { Route as ApiMusicRouteImport } from './routes/api/music'
 import { Route as ApiGenerateTurnRouteImport } from './routes/api/generate-turn'
 
 const QuestRoute = QuestRouteImport.update({
@@ -36,11 +35,6 @@ const ApiVoiceChatRoute = ApiVoiceChatRouteImport.update({
   path: '/api/voice-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiMusicRoute = ApiMusicRouteImport.update({
-  id: '/api/music',
-  path: '/api/music',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiGenerateTurnRoute = ApiGenerateTurnRouteImport.update({
   id: '/api/generate-turn',
   path: '/api/generate-turn',
@@ -52,7 +46,6 @@ export interface FileRoutesByFullPath {
   '/map': typeof MapRoute
   '/quest': typeof QuestRoute
   '/api/generate-turn': typeof ApiGenerateTurnRoute
-  '/api/music': typeof ApiMusicRoute
   '/api/voice-chat': typeof ApiVoiceChatRoute
 }
 export interface FileRoutesByTo {
@@ -60,7 +53,6 @@ export interface FileRoutesByTo {
   '/map': typeof MapRoute
   '/quest': typeof QuestRoute
   '/api/generate-turn': typeof ApiGenerateTurnRoute
-  '/api/music': typeof ApiMusicRoute
   '/api/voice-chat': typeof ApiVoiceChatRoute
 }
 export interface FileRoutesById {
@@ -69,33 +61,19 @@ export interface FileRoutesById {
   '/map': typeof MapRoute
   '/quest': typeof QuestRoute
   '/api/generate-turn': typeof ApiGenerateTurnRoute
-  '/api/music': typeof ApiMusicRoute
   '/api/voice-chat': typeof ApiVoiceChatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/map'
-    | '/quest'
-    | '/api/generate-turn'
-    | '/api/music'
-    | '/api/voice-chat'
+  fullPaths: '/' | '/map' | '/quest' | '/api/generate-turn' | '/api/voice-chat'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/map'
-    | '/quest'
-    | '/api/generate-turn'
-    | '/api/music'
-    | '/api/voice-chat'
+  to: '/' | '/map' | '/quest' | '/api/generate-turn' | '/api/voice-chat'
   id:
     | '__root__'
     | '/'
     | '/map'
     | '/quest'
     | '/api/generate-turn'
-    | '/api/music'
     | '/api/voice-chat'
   fileRoutesById: FileRoutesById
 }
@@ -104,7 +82,6 @@ export interface RootRouteChildren {
   MapRoute: typeof MapRoute
   QuestRoute: typeof QuestRoute
   ApiGenerateTurnRoute: typeof ApiGenerateTurnRoute
-  ApiMusicRoute: typeof ApiMusicRoute
   ApiVoiceChatRoute: typeof ApiVoiceChatRoute
 }
 
@@ -138,13 +115,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiVoiceChatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/music': {
-      id: '/api/music'
-      path: '/api/music'
-      fullPath: '/api/music'
-      preLoaderRoute: typeof ApiMusicRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/generate-turn': {
       id: '/api/generate-turn'
       path: '/api/generate-turn'
@@ -160,7 +130,6 @@ const rootRouteChildren: RootRouteChildren = {
   MapRoute: MapRoute,
   QuestRoute: QuestRoute,
   ApiGenerateTurnRoute: ApiGenerateTurnRoute,
-  ApiMusicRoute: ApiMusicRoute,
   ApiVoiceChatRoute: ApiVoiceChatRoute,
 }
 export const routeTree = rootRouteImport

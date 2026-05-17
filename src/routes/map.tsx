@@ -109,14 +109,6 @@ function MapDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
 
-  // Sync background music to active tab
-  useEffect(() => {
-    const themeMap: Record<TabKey, string> = {
-      map: "map", quests: "quests", lore: "lore", armory: "armory", me: "me",
-    };
-    window.dispatchEvent(new CustomEvent("dwa:music-theme", { detail: { theme: themeMap[tab] } }));
-  }, [tab]);
-
   if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
