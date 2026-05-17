@@ -65,6 +65,7 @@ function MapDashboard() {
   const [activeLocation, setActiveLocation] = useState<string | null>(null);
   const [gateModal, setGateModal] = useState(false);
   const [activeTrack, setActiveTrack] = useState<{ track: string; location: string; input: string } | null>(null);
+  const [readingLoading, setReadingLoading] = useState<{ location: string } | null>(null);
   const [currentRegionXp, setCurrentRegionXp] = useState(4);
 
   const { progress } = useSessionTracker(profile?.id ?? null);
