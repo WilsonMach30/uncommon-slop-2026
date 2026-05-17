@@ -124,8 +124,7 @@ export const Route = createFileRoute("/api/voice-chat")({
               { role: "system", content: system },
               {
                 role: "user",
-                content:
-                  "Greet me warmly in character. Start the conversation by reacting to the scene/object I just described and ask me an opening question about it.",
+                content: `Greet me warmly in character, speaking ENTIRELY in ${language || "the target language"}. Start the conversation by reacting to the scene/object I just described and ask me an opening question about it. Do not use any English (unless the target language is English).`,
               },
             ];
             const reply = await chat(messages);
