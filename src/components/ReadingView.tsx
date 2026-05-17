@@ -26,6 +26,23 @@ export default function ReadingView({
   const [shortAnswers, setShortAnswers] = useState<Record<number, string>>({});
   const [revealed, setRevealed] = useState(false);
 
+  // useEffect(() => {
+  //   setLoading(true);
+  //   setError("");
+  //   fetch("http://127.0.0.1:5002/generate-reading", {
+  //     method: "POST",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify({ level, language, interests }),
+  //   })
+  //     .then((r) => r.json())
+  //     .then((res) => {
+  //       if (res.error) throw new Error(res.error);
+  //       const parsed: ReadingData = typeof res.data === "string" ? JSON.parse(res.data) : res.data;
+  //       setData(parsed);
+  //     })
+  //     .catch((e) => setError(e.message ?? "Failed to load reading"))
+  //     .finally(() => setLoading(false));
+  // }, [level, language, interests]);
   useEffect(() => {
     setLoading(true);
     setError("");
@@ -37,8 +54,16 @@ export default function ReadingView({
       .then((r) => r.json())
       .then((res) => {
         if (res.error) throw new Error(res.error);
-        const parsed: ReadingData = typeof res.data === "string" ? JSON.parse(res.data) : res.data;
-        setData(parsed);
+        
+        // Extract the nested structured data returned from your endpoint wrapper
+        let readingPayload = res.data;
+        
+        // If the backend sent back a serialized text string block, convert it back to an object
+        if (typeof readingPayload === "string") {
+            readingPayload = JSON.parse(readingPayload);
+        }
+        
+        setData(readingPayload);
       })
       .catch((e) => setError(e.message ?? "Failed to load reading"))
       .finally(() => setLoading(false));
