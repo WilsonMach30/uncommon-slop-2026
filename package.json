@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite dev",
     "dev:flask": "python backend_hellhole/app.py",
+    "dev:flask2": "python backend_hellhole/app2.py",
     "dev:reading": "python backend_hellhole/reading.py",
-    "dev:all": "concurrently \"npm run dev\" \"npm run dev:flask\" \"npm run dev:reading\"",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:flask\" \"npm run dev:flask2\" \"npm run dev:reading\"",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
