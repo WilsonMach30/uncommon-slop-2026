@@ -83,8 +83,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Dumb Ways to AI — Language RPG" },
       { name: "twitter:description", content: "A gamified RPG language learning adventure. Explore regions, complete quests, and grow your streak." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/974225d8-b22e-4226-a247-3f37561327c0/id-preview-8b87a2ef--6984a25e-da25-4bbd-b5e6-c67a9efbfb9a.lovable.app-1778965044346.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/974225d8-b22e-4226-a247-3f37561327c0/id-preview-8b87a2ef--6984a25e-da25-4bbd-b5e6-c67a9efbfb9a.lovable.app-1778965044346.png" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/9f53e9e0-cc08-4a78-a189-1df769b9f39c" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/9f53e9e0-cc08-4a78-a189-1df769b9f39c" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
