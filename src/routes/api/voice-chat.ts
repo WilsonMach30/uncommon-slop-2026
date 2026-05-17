@@ -2,11 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 
 const ELEVEN_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"; // George — warm innkeeper
 
+type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
+
 async function transcribe(audio: Blob, apiKey: string): Promise<string> {
   const form = new FormData();
   form.append("file", audio, "recording.webm");
   form.append("model_id", "scribe_v2");
-
   const res = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
     method: "POST",
     headers: { "xi-api-key": apiKey },
@@ -17,30 +18,28 @@ async function transcribe(audio: Blob, apiKey: string): Promise<string> {
   return (data.text ?? "").trim();
 }
 
-async function chat(userText: string, location: string, language: string): Promise<string> {
-  const key = process.env.WAFER_API_KEY;
-  if (!key) throw new Error("WAFER_API_KEY is not configured");
-
-  const systemPrompt = `You are an in-character innkeeper in a fantasy tavern in "${location}".
+function buildSystem(location: string, language: string, description: string, imageUrl: string | null): string {
+  return `You are an in-character innkeeper in a fantasy tavern in "${location}".
 You are helping the traveler practice their ${language || "target language"} through natural conversation.
+
+The traveler has just shown you a scene/object they want to talk about.
+Scene description from the traveler: "${description || "(no description provided)"}"
+${imageUrl ? `(An image was also shared.)` : ""}
+
 - Reply in 1-2 short sentences (max ~40 words).
 - Stay warm, vivid, and in-character.
-- Gently correct or model better phrasing if their speech has obvious mistakes, but keep it conversational.
+- Anchor the conversation in the scene above — reference details from it.
+- Gently model better phrasing if their speech has obvious mistakes.
 - Always end with a small question that invites them to keep speaking.`;
+}
 
+async function chat(messages: ChatMessage[]): Promise<string> {
+  const key = process.env.WAFER_API_KEY;
+  if (!key) throw new Error("WAFER_API_KEY is not configured");
   const res = await fetch("https://pass.wafer.ai/v1/chat/completions", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify({
-      model: "Qwen3.5-397B-A17B",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userText || "(the traveler said nothing intelligible)" },
-      ],
-    }),
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    body: JSON.stringify({ model: "Qwen3.5-397B-A17B", messages }),
   });
   if (!res.ok) throw new Error(`LLM failed ${res.status}: ${await res.text()}`);
   const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
@@ -52,10 +51,7 @@ async function synthesize(text: string, apiKey: string): Promise<ArrayBuffer> {
     `https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN_VOICE_ID}?output_format=mp3_44100_128`,
     {
       method: "POST",
-      headers: {
-        "xi-api-key": apiKey,
-        "Content-Type": "application/json",
-      },
+      headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({
         text,
         model_id: "eleven_turbo_v2_5",
@@ -77,21 +73,82 @@ export const Route = createFileRoute("/api/voice-chat")({
             return Response.json({ error: "ELEVENLABS_API_KEY is not configured" }, { status: 500 });
           }
 
-          const form = await request.formData();
-          const audio = form.get("audio");
-          const location = (form.get("location") as string) || "the tavern";
-          const language = (form.get("language") as string) || "";
+          const contentType = request.headers.get("content-type") ?? "";
+          let mode = "turn";
+          let location = "the tavern";
+          let language = "";
+          let description = "";
+          let imageUrl: string | null = null;
+          let history: ChatMessage[] = [];
+          let audio: Blob | null = null;
 
-          if (!(audio instanceof Blob)) {
+          if (contentType.includes("application/json")) {
+            const body = (await request.json()) as {
+              mode?: string;
+              location?: string;
+              language?: string;
+              description?: string;
+              image_url?: string | null;
+              history?: ChatMessage[];
+            };
+            mode = body.mode ?? "opening";
+            location = body.location ?? location;
+            language = body.language ?? "";
+            description = body.description ?? "";
+            imageUrl = body.image_url ?? null;
+            history = body.history ?? [];
+          } else {
+            const form = await request.formData();
+            mode = (form.get("mode") as string) || "turn";
+            location = (form.get("location") as string) || location;
+            language = (form.get("language") as string) || "";
+            description = (form.get("description") as string) || "";
+            imageUrl = (form.get("image_url") as string) || null;
+            const histRaw = form.get("history") as string | null;
+            if (histRaw) {
+              try { history = JSON.parse(histRaw); } catch { /* empty */ }
+            }
+            const a = form.get("audio");
+            if (a instanceof Blob) audio = a;
+          }
+
+          const system = buildSystem(location, language, description, imageUrl);
+
+          if (mode === "opening") {
+            const messages: ChatMessage[] = [
+              { role: "system", content: system },
+              {
+                role: "user",
+                content:
+                  "Greet me warmly in character. Start the conversation by reacting to the scene/object I just described and ask me an opening question about it.",
+              },
+            ];
+            const reply = await chat(messages);
+            const mp3 = await synthesize(reply, elevenKey);
+            return Response.json({
+              transcript: "",
+              reply,
+              audio: Buffer.from(mp3).toString("base64"),
+            });
+          }
+
+          if (!audio) {
             return Response.json({ error: "Missing audio file" }, { status: 400 });
           }
 
           const transcript = await transcribe(audio, elevenKey);
-          const reply = await chat(transcript, location, language);
+          const messages: ChatMessage[] = [
+            { role: "system", content: system },
+            ...history,
+            { role: "user", content: transcript || "(the traveler said nothing intelligible)" },
+          ];
+          const reply = await chat(messages);
           const mp3 = await synthesize(reply, elevenKey);
-          const audioBase64 = Buffer.from(mp3).toString("base64");
-
-          return Response.json({ transcript, reply, audio: audioBase64 });
+          return Response.json({
+            transcript,
+            reply,
+            audio: Buffer.from(mp3).toString("base64"),
+          });
         } catch (err) {
           const message = err instanceof Error ? err.message : "unknown error";
           console.error("voice-chat error:", message);
