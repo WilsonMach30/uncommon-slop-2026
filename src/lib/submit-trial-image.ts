@@ -40,3 +40,6 @@ export async function submitTrialImage(file: File, description: string) {
 
   return { id: profileHistoryId, imageUrl, storagePath };
 }
+
+export type SubmittedTrialImage = Awaited<ReturnType<typeof submitTrialImage>>;
+
