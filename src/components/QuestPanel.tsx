@@ -41,7 +41,7 @@ export default function QuestPanel({
   onClose: () => void;
   profileId: string;
   progress: number;
-  onStartTrack: (track: string, input: string) => void;
+  onStartTrack: (track: string, input: string, meta?: { imageUrl?: string; description?: string }) => void;
 }) {
   const [input, setInput] = useState("");
   const [chosen, setChosen] = useState<string | null>(null);
