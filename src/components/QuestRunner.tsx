@@ -489,12 +489,58 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
 function SpeakingMicBar({ disabled, location = "the tavern" }: { disabled?: boolean; location?: string }) {
   const [recording, setRecording] = useState(false);
   const [responding, setResponding] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [canExit, setCanExit] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [reply, setReply] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Start session on mount
+  useEffect(() => {
+    setSessionReady(false);
+    setErrorMsg("");
+    console.log("[voice] starting session for topic:", location);
+    fetch("http://127.0.0.1:5001/start-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic: location, language_native: "English", language_target: "Spanish", level: "BEGINNER" }),
+    })
+      .then((r) => r.json())
+      .then((data: { reply?: string; audio?: string; error?: string }) => {
+        if (data.error) throw new Error(data.error);
+        console.log("[voice] session started, opening:", data.reply);
+        setReply(data.reply ?? "");
+        if (data.audio && audioRef.current) {
+          audioRef.current.src = `data:audio/mpeg;base64,${data.audio}`;
+          audioRef.current.play().catch((e) => console.warn("[voice] autoplay blocked:", e));
+        }
+        setSessionReady(true);
+      })
+      .catch((e) => {
+        console.error("[voice] start-session error:", e);
+        setErrorMsg("Could not start session. Is app2.py running on port 5001?");
+      });
+
+    return () => {
+      fetch("http://127.0.0.1:5001/end-session", { method: "POST" }).catch(() => {});
+    };
+  }, [location]);
+
+  const endSession = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:5001/end-session", { method: "POST" });
+      const data = await res.json() as { summary?: string };
+      console.log("[voice] session summary:", data.summary);
+      setReply(data.summary ?? "Session ended.");
+      setCanExit(false);
+      setSessionReady(false);
+    } catch (e) {
+      console.error("[voice] end-session error:", e);
+    }
+  };
 
   const sendAudio = async (blob: Blob) => {
     setResponding(true);
@@ -504,17 +550,18 @@ function SpeakingMicBar({ disabled, location = "the tavern" }: { disabled?: bool
       const form = new FormData();
       form.append("audio", blob, "recording.webm");
 
-      console.log("[voice] POST http://127.0.0.1:5000/respond-to-voice");
-      const res = await fetch("http://127.0.0.1:5000/respond-to-voice", { method: "POST", body: form });
+      console.log("[voice] POST http://127.0.0.1:5001/respond-to-voice");
+      const res = await fetch("http://127.0.0.1:5001/respond-to-voice", { method: "POST", body: form });
       console.log("[voice] response status", res.status);
-      const data = (await res.json()) as { transcript?: string; reply?: string; audio?: string; error?: string };
+      const data = (await res.json()) as { transcript?: string; reply?: string; audio?: string; turn?: number; can_exit?: boolean; error?: string };
       if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
 
       console.log("[voice] transcript:", data.transcript);
       console.log("[voice] reply:", data.reply);
-      console.log("[voice] audio bytes (base64 length):", data.audio?.length ?? 0);
+      console.log("[voice] turn:", data.turn, "can_exit:", data.can_exit);
       setTranscript(data.transcript ?? "");
       setReply(data.reply ?? "");
+      setCanExit(data.can_exit ?? false);
 
       if (data.audio && audioRef.current) {
         audioRef.current.src = `data:audio/mpeg;base64,${data.audio}`;
@@ -576,6 +623,12 @@ function SpeakingMicBar({ disabled, location = "the tavern" }: { disabled?: bool
 
   return (
     <div className="flex flex-col gap-3">
+      {!sessionReady && !errorMsg && (
+        <div className="flex items-center justify-center gap-2 py-4 text-tertiary">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span className="font-mono-label text-[10px] uppercase tracking-widest">Starting session…</span>
+        </div>
+      )}
       <button
         type="button"
         onMouseDown={startRecording}
@@ -583,7 +636,7 @@ function SpeakingMicBar({ disabled, location = "the tavern" }: { disabled?: bool
         onMouseLeave={() => recording && stopRecording()}
         onTouchStart={startRecording}
         onTouchEnd={stopRecording}
-        disabled={disabled || responding}
+        disabled={disabled || responding || !sessionReady}
         className={`group w-full flex items-center gap-3 px-3 py-3 rounded-md border-2 border-black shadow-hard transition-all select-none ${
           recording
             ? "bg-red-950/60 border-red-500"
@@ -643,6 +696,14 @@ function SpeakingMicBar({ disabled, location = "the tavern" }: { disabled?: bool
           <p className="font-mono-label text-[9px] uppercase tracking-widest text-[#f7be1d] mb-1">The Innkeeper</p>
           <p className="font-serif text-sm text-cream">{reply}</p>
         </div>
+      )}
+      {canExit && (
+        <button
+          onClick={endSession}
+          className="w-full px-4 py-2 rounded border-2 border-[#f7be1d]/60 bg-[#20201a] text-[#f7be1d] font-mono-label text-[10px] uppercase tracking-widest hover:bg-[#2a2a1a] transition-colors"
+        >
+          ⟢ End Session &amp; Get Summary ⟣
+        </button>
       )}
       {errorMsg && (
         <p className="font-mono-label text-[10px] uppercase tracking-wider text-red-400 text-center">{errorMsg}</p>
