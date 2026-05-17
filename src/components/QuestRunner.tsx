@@ -11,6 +11,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 
 const TOTAL_STEPS = 5;
+const SPEAKING_TURNS = 3;
 const LOCKOUT_SECONDS = 30;
 
 export default function QuestRunner({ onExit, track = "speaking", location = "the tavern", language, level, interests }: { onExit?: () => void; track?: string; location?: string; language?: string; level?: number; interests?: string }) {
