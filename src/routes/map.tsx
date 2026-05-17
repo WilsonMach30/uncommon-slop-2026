@@ -297,6 +297,7 @@ function MapDashboard() {
         </div>
       )}
 
+      {gateModal && (
         <div
           className="fixed inset-0 z-[70] bg-black/95 backdrop-blur-md flex items-center justify-center p-6"
           onClick={() => setGateModal(false)}
