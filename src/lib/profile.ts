@@ -57,3 +57,30 @@ export async function logEngagement(
 ) {
   await supabase.from("engagement_logs").insert({ profile_id: profileId, ...payload });
 }
+
+export const QUEST_VICTORY_XP = 50;
+export const QUEST_VICTORY_GOLD = 20;
+
+/** Awards loot for completing all steps in a quest conversation round. */
+export async function awardQuestRoundVictory(profileId: string) {
+  const { data: current, error: fetchError } = await supabase
+    .from("profiles")
+    .select("gold_tokens, proficiency_score")
+    .eq("id", profileId)
+    .single();
+  if (fetchError) throw fetchError;
+
+  const gold_tokens = (current?.gold_tokens ?? 0) + QUEST_VICTORY_GOLD;
+  const proficiency_score = (current?.proficiency_score ?? 0) + QUEST_VICTORY_XP;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ gold_tokens, proficiency_score })
+    .eq("id", profileId)
+    .select("gold_tokens, proficiency_score")
+    .single();
+  if (error) throw error;
+
+  await logEngagement(profileId, { event_type: "quest_victory", duration_seconds: 0 });
+  return data;
+}

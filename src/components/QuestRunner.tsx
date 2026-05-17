@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Heart, Check, X, Trophy, ArrowLeft, Flame, Sparkles, Star, Mic, MicOff, Loader2 } from "lucide-react";
+import { Heart, Check, X, Trophy, ArrowLeft, Flame, Sparkles, Star, Mic, MicOff, Loader2, Coins, Shield } from "lucide-react";
+import { toast } from "sonner";
 import ReadingView from "@/components/ReadingView";
+import {
+  awardQuestRoundVictory,
+  getStoredProfileId,
+  QUEST_VICTORY_GOLD,
+  QUEST_VICTORY_XP,
+} from "@/lib/profile";
+import { supabase } from "@/integrations/supabase/client";
 
 const TOTAL_STEPS = 5;
 const LOCKOUT_SECONDS = 30;
@@ -12,6 +20,9 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
   const [lockoutRemaining, setLockoutRemaining] = useState(LOCKOUT_SECONDS);
   const [victory, setVictory] = useState(false);
   const [shake, setShake] = useState(false);
+  const [goldTokens, setGoldTokens] = useState<number | null>(null);
+  const [proficiencyScore, setProficiencyScore] = useState<number | null>(null);
+  const victoryAwardedRef = useRef(false);
 
   // Lockout trigger
   useEffect(() => {
@@ -39,6 +50,44 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
     return () => clearInterval(id);
   }, [isLockedOut]);
 
+  useEffect(() => {
+    const profileId = getStoredProfileId();
+    if (!profileId) return;
+    supabase
+      .from("profiles")
+      .select("gold_tokens, proficiency_score")
+      .eq("id", profileId)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setGoldTokens(data.gold_tokens ?? 0);
+          setProficiencyScore(data.proficiency_score ?? 0);
+        }
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!victory || victoryAwardedRef.current) return;
+    const profileId = getStoredProfileId();
+    if (!profileId) {
+      toast.error("No wanderer profile found — return to the map and try again.");
+      return;
+    }
+    victoryAwardedRef.current = true;
+    awardQuestRoundVictory(profileId)
+      .then((data) => {
+        if (data) {
+          setGoldTokens(data.gold_tokens);
+          setProficiencyScore(data.proficiency_score);
+        }
+      })
+      .catch((err) => {
+        victoryAwardedRef.current = false;
+        console.error("[quest victory]", err);
+        toast.error("Could not award your loot. Check your connection and try again.");
+      });
+  }, [victory]);
+
   const onCorrect = () => {
     if (isLockedOut || victory) return;
     setCurrentStep((s) => {
@@ -56,6 +105,7 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
   };
 
   const resetAll = () => {
+    victoryAwardedRef.current = false;
     setVictory(false);
     setCurrentStep(0);
     setLives(3);
@@ -196,6 +246,22 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
             );
           })}
         </div>
+
+        {/* Wallet */}
+        {(goldTokens != null || proficiencyScore != null) && (
+          <div className="hidden sm:flex items-center gap-3 mr-1 font-mono-label text-[10px] uppercase tracking-wider text-tertiary">
+            {proficiencyScore != null && (
+              <span className="flex items-center gap-1">
+                <Shield className="w-3.5 h-3.5" /> {proficiencyScore} XP
+              </span>
+            )}
+            {goldTokens != null && (
+              <span className="flex items-center gap-1 text-[#f7be1d]">
+                <Coins className="w-3.5 h-3.5" /> {goldTokens} Gold
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Lives */}
         <div className="flex items-center gap-1">
@@ -399,7 +465,9 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
             </p>
             <div className="flex items-center justify-center gap-2 mt-4 animate-[fade-in_0.6s_ease-out_1s_both]">
               <Sparkles className="w-4 h-4 text-[#f7be1d]" />
-              <span className="font-mono-label text-xs uppercase tracking-[0.3em] text-[#f7be1d]">+ 50 XP · + 10 Gold</span>
+              <span className="font-mono-label text-xs uppercase tracking-[0.3em] text-[#f7be1d]">
+                + {QUEST_VICTORY_XP} XP · + {QUEST_VICTORY_GOLD} Gold
+              </span>
               <Sparkles className="w-4 h-4 text-[#f7be1d]" />
             </div>
             <button
