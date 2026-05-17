@@ -42,7 +42,8 @@ Always respond with strict JSON ONLY (no markdown, no commentary) shaped exactly
 Rules:
 - Exactly 3 multiple choice questions, 4 options each, "answer" is the 0-based correct index.
 - Exactly 2 short answer questions, each with a 1-2 sentence "model_answer".
-- Every field — passage, questions, options, model answers — must be written entirely in the target language. Never use English.
+- The passage, questions, options, and model answers must be written entirely in the target language. Never use English for those fields.
+- The "explanation" field for each multiple choice question MUST be written in English (it is feedback shown to the learner).
 - Match the requested difficulty level strictly.`;
 
   const user = `Target language: ${opts.language || "Spanish"}
