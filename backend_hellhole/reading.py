@@ -43,7 +43,7 @@ def handle_reading_generation():
         # 1. Grab target settings from front-end payload body
         data = request.json or {}
         user_level_num = data.get('level', 1)  # Defaulting to 1 (Intermediate)
-        target_language = data.get('language', 'Arabic')
+        target_language = data.get('language', {target_language})
         user_interests = data.get('interests', 'Daily life, technology, history')
         
         # -------------------------------------------------------------
