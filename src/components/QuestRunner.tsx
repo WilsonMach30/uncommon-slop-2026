@@ -301,7 +301,18 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
           </h2>
 
           {track === "speaking" ? (
-            <SpeakingMicBar disabled={isLockedOut || victory} location={location} language={language} />
+            <SpeakingMicBar
+              disabled={isLockedOut || victory}
+              location={location}
+              language={language}
+              onTurn={(turnIndex) => {
+                // Advance the gold progress bar proportionally to 3 turns.
+                const next = Math.min(TOTAL_STEPS, Math.round((turnIndex / SPEAKING_TURNS) * TOTAL_STEPS));
+                setCurrentStep(next);
+                if (turnIndex >= SPEAKING_TURNS) setVictory(true);
+              }}
+              onFeedbackReady={(fb) => setSpeakingFeedback(fb)}
+            />
           ) : track === "reading" ? (
             <ReadingView
               disabled={isLockedOut || victory}
