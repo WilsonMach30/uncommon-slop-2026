@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as QuestRouteImport } from './routes/quest'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiVoiceFeedbackRouteImport } from './routes/api/voice-feedback'
 import { Route as ApiVoiceChatRouteImport } from './routes/api/voice-chat'
 import { Route as ApiReadingPackRouteImport } from './routes/api/reading-pack'
 import { Route as ApiJudgeAnswerRouteImport } from './routes/api/judge-answer'
@@ -30,6 +31,11 @@ const MapRoute = MapRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVoiceFeedbackRoute = ApiVoiceFeedbackRouteImport.update({
+  id: '/api/voice-feedback',
+  path: '/api/voice-feedback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiVoiceChatRoute = ApiVoiceChatRouteImport.update({
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/api/judge-answer': typeof ApiJudgeAnswerRoute
   '/api/reading-pack': typeof ApiReadingPackRoute
   '/api/voice-chat': typeof ApiVoiceChatRoute
+  '/api/voice-feedback': typeof ApiVoiceFeedbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByTo {
   '/api/judge-answer': typeof ApiJudgeAnswerRoute
   '/api/reading-pack': typeof ApiReadingPackRoute
   '/api/voice-chat': typeof ApiVoiceChatRoute
+  '/api/voice-feedback': typeof ApiVoiceFeedbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,6 +88,7 @@ export interface FileRoutesById {
   '/api/judge-answer': typeof ApiJudgeAnswerRoute
   '/api/reading-pack': typeof ApiReadingPackRoute
   '/api/voice-chat': typeof ApiVoiceChatRoute
+  '/api/voice-feedback': typeof ApiVoiceFeedbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,6 +100,7 @@ export interface FileRouteTypes {
     | '/api/judge-answer'
     | '/api/reading-pack'
     | '/api/voice-chat'
+    | '/api/voice-feedback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
     | '/api/judge-answer'
     | '/api/reading-pack'
     | '/api/voice-chat'
+    | '/api/voice-feedback'
   id:
     | '__root__'
     | '/'
@@ -109,6 +120,7 @@ export interface FileRouteTypes {
     | '/api/judge-answer'
     | '/api/reading-pack'
     | '/api/voice-chat'
+    | '/api/voice-feedback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -119,6 +131,7 @@ export interface RootRouteChildren {
   ApiJudgeAnswerRoute: typeof ApiJudgeAnswerRoute
   ApiReadingPackRoute: typeof ApiReadingPackRoute
   ApiVoiceChatRoute: typeof ApiVoiceChatRoute
+  ApiVoiceFeedbackRoute: typeof ApiVoiceFeedbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -142,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/voice-feedback': {
+      id: '/api/voice-feedback'
+      path: '/api/voice-feedback'
+      fullPath: '/api/voice-feedback'
+      preLoaderRoute: typeof ApiVoiceFeedbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/voice-chat': {
@@ -183,7 +203,18 @@ const rootRouteChildren: RootRouteChildren = {
   ApiJudgeAnswerRoute: ApiJudgeAnswerRoute,
   ApiReadingPackRoute: ApiReadingPackRoute,
   ApiVoiceChatRoute: ApiVoiceChatRoute,
+  ApiVoiceFeedbackRoute: ApiVoiceFeedbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
