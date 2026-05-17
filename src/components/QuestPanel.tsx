@@ -41,7 +41,7 @@ export default function QuestPanel({
   onClose: () => void;
   profileId: string;
   progress: number;
-  onStartTrack: (track: string, input: string) => void;
+  onStartTrack: (track: string, input: string, meta?: { imageUrl?: string; description?: string }) => void;
 }) {
   const [input, setInput] = useState("");
   const [chosen, setChosen] = useState<string | null>(null);
@@ -114,9 +114,11 @@ export default function QuestPanel({
     }
 
     setSubmitting(true);
+    let uploaded: { imageUrl: string } | null = null;
     try {
       const description = `[${location.name}] ${input.trim()}`;
-      await submitTrialImage(imageFile, description);
+      const result = await submitTrialImage(imageFile, description);
+      uploaded = { imageUrl: result.imageUrl };
       toast.success("Your trial has been recorded in the archives.");
     } catch (err) {
       console.error("[trial upload]", err);
@@ -126,7 +128,7 @@ export default function QuestPanel({
     }
     setSubmitting(false);
 
-    onStartTrack(chosen, input);
+    onStartTrack(chosen, input, { imageUrl: uploaded?.imageUrl, description: input.trim() });
     handleClose();
   };
 

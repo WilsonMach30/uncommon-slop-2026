@@ -65,6 +65,7 @@ function MapDashboard() {
   const [activeLocation, setActiveLocation] = useState<string | null>(null);
   const [gateModal, setGateModal] = useState(false);
   const [activeTrack, setActiveTrack] = useState<{ track: string; location: string; input: string } | null>(null);
+  const [readingLoading, setReadingLoading] = useState<{ location: string } | null>(null);
   const [currentRegionXp, setCurrentRegionXp] = useState(4);
 
   const { progress } = useSessionTracker(profile?.id ?? null);
@@ -229,9 +230,36 @@ function MapDashboard() {
           onClose={() => setActiveLocation(null)}
           profileId={profile.id}
           progress={progress}
-          onStartTrack={(track, input) => {
+          onStartTrack={async (track, input, meta) => {
             const loc = activeLocation ? LOCATIONS[activeLocation]?.name ?? activeLocation : "the tavern";
             setActiveLocation(null);
+
+            if (track === "reading") {
+              setReadingLoading({ location: loc });
+              try {
+                const res = await fetch("/api/reading-pack", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    language: profile.language,
+                    level: profile.exploration_level,
+                    interests: profile.interests.join(", "),
+                    description: meta?.description ?? input,
+                    image_url: meta?.imageUrl ?? null,
+                  }),
+                });
+                const data = await res.json();
+                if (!res.ok || !data?.pack) throw new Error(data?.error ?? "Failed to generate reading");
+                sessionStorage.setItem("reading_pack", JSON.stringify(data.pack));
+              } catch (err) {
+                console.error("[reading-pack]", err);
+                toast.error("The scrolls would not yield. Try again, wanderer.");
+                setReadingLoading(null);
+                return;
+              }
+              setReadingLoading(null);
+            }
+
             navigate({
               to: "/quest",
               search: {
@@ -254,6 +282,19 @@ function MapDashboard() {
           userInput={activeTrack.input}
           onClose={() => setActiveTrack(null)}
         />
+      )}
+
+      {readingLoading && (
+        <div className="fixed inset-0 z-[80] bg-black/85 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="panel-bark border-4 border-tertiary rounded-2xl shadow-panel glow-gold max-w-md w-full p-8 text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-tertiary mx-auto" />
+            <p className="font-mono-label text-[10px] uppercase tracking-[0.4em] text-tertiary mt-6">⟢ The Scribe is Writing ⟣</p>
+            <h3 className="font-serif text-2xl text-cream mt-3">Inscribing your scroll…</h3>
+            <p className="text-sm text-muted-foreground mt-3 font-serif italic">
+              The court scribe of <span className="text-cream">{readingLoading.location}</span> studies your scene and crafts a passage worthy of your trial. Wait here, wanderer.
+            </p>
+          </div>
+        </div>
       )}
 
       {gateModal && (

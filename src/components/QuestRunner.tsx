@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Heart, Check, X, Trophy, ArrowLeft, Flame, Sparkles, Star, Mic, MicOff, Loader2, Coins, Shield } from "lucide-react";
 import { toast } from "sonner";
-import ReadingView from "@/components/ReadingView";
+import ReadingView, { ReadingResultsScreen, type ReadingOutcome } from "@/components/ReadingView";
 import {
   awardQuestRoundVictory,
   getStoredProfileId,
@@ -23,6 +23,7 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
   const [goldTokens, setGoldTokens] = useState<number | null>(null);
   const [proficiencyScore, setProficiencyScore] = useState<number | null>(null);
   const victoryAwardedRef = useRef(false);
+  const [readingOutcome, setReadingOutcome] = useState<ReadingOutcome | null>(null);
 
   // Lockout trigger
   useEffect(() => {
@@ -303,9 +304,12 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
               disabled={isLockedOut || victory}
               onCorrect={onCorrect}
               onWrong={onWrong}
+              onComplete={(outcome) => {
+                setReadingOutcome(outcome);
+                if (outcome.victory) setVictory(true);
+              }}
+              livesRemaining={lives}
               language={language}
-              level={level}
-              interests={interests}
             />
           ) : (
             <div className="grid gap-3">
@@ -478,6 +482,18 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
             </button>
           </div>
         </div>
+      )}
+
+      {/* === Reading Trial Results === */}
+      {readingOutcome && (
+        <ReadingResultsScreen
+          outcome={readingOutcome}
+          onClose={() => {
+            setReadingOutcome(null);
+            sessionStorage.removeItem("reading_pack");
+            onExit?.();
+          }}
+        />
       )}
 
       {/* === Lockout / Tavern Cooldown — fire & embers === */}
