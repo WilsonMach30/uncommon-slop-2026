@@ -298,7 +298,7 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
           </h2>
 
           {track === "speaking" ? (
-            <SpeakingMicBar disabled={isLockedOut || victory} location={location} />
+            <SpeakingMicBar disabled={isLockedOut || victory} location={location} language={language} />
           ) : track === "reading" ? (
             <ReadingView
               disabled={isLockedOut || victory}
