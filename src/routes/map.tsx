@@ -284,7 +284,19 @@ function MapDashboard() {
         />
       )}
 
-      {gateModal && (
+      {readingLoading && (
+        <div className="fixed inset-0 z-[80] bg-black/85 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="panel-bark border-4 border-tertiary rounded-2xl shadow-panel glow-gold max-w-md w-full p-8 text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-tertiary mx-auto" />
+            <p className="font-mono-label text-[10px] uppercase tracking-[0.4em] text-tertiary mt-6">⟢ The Scribe is Writing ⟣</p>
+            <h3 className="font-serif text-2xl text-cream mt-3">Inscribing your scroll…</h3>
+            <p className="text-sm text-muted-foreground mt-3 font-serif italic">
+              The court scribe of <span className="text-cream">{readingLoading.location}</span> studies your scene and crafts a passage worthy of your trial. Wait here, wanderer.
+            </p>
+          </div>
+        </div>
+      )}
+
         <div
           className="fixed inset-0 z-[70] bg-black/95 backdrop-blur-md flex items-center justify-center p-6"
           onClick={() => setGateModal(false)}
