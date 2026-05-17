@@ -488,12 +488,29 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
               </span>
               <Sparkles className="w-4 h-4 text-[#f7be1d]" />
             </div>
-            <button
-              onClick={resetAll}
-              className="mt-6 px-6 py-2.5 rounded border-2 border-black bg-[#f7be1d] text-[#1a0800] font-bold text-sm uppercase tracking-wider shadow-hard hover:-translate-y-0.5 transition-transform animate-[fade-in_0.6s_ease-out_1.2s_both]"
-            >
-              Another Round
-            </button>
+            <div className="mt-6 flex flex-col items-center gap-2 animate-[fade-in_0.6s_ease-out_1.2s_both]">
+              <button
+                onClick={resetAll}
+                className="px-6 py-2.5 rounded border-2 border-black bg-[#f7be1d] text-[#1a0800] font-bold text-sm uppercase tracking-wider shadow-hard hover:-translate-y-0.5 transition-transform"
+              >
+                Another Round
+              </button>
+              {track === "speaking" && (
+                <button
+                  onClick={() => setShowSpeakingFeedback(true)}
+                  disabled={!speakingFeedback}
+                  className="px-6 py-2 rounded border-2 border-[#f7be1d]/70 bg-[#20201a] text-[#f7be1d] font-mono-label text-[10px] uppercase tracking-widest hover:bg-[#2a2a1a] transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {speakingFeedback ? (
+                    <>⟢ See Feedback ⟣</>
+                  ) : (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Scoring your tale…
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
