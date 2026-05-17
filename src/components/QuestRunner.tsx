@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Heart, Check, X, Trophy, ArrowLeft, Flame, Sparkles, Star, Mic, MicOff, Loader2 } from "lucide-react";
+import ReadingView from "@/components/ReadingView";
 
 const TOTAL_STEPS = 5;
 const LOCKOUT_SECONDS = 30;
@@ -231,6 +232,12 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
 
           {track === "speaking" ? (
             <SpeakingMicBar disabled={isLockedOut || victory} location={location} />
+          ) : track === "reading" ? (
+            <ReadingView
+              disabled={isLockedOut || victory}
+              onCorrect={onCorrect}
+              onWrong={onWrong}
+            />
           ) : (
             <div className="grid gap-3">
               {["Délicieux", "Effrayant", "Ennuyeux", "Coûteux"].map((opt, i) => (

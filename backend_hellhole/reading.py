@@ -107,4 +107,4 @@ def handle_reading_generation():
 
 if __name__ == '__main__':
     # Starts your detached reading system on port 5001 to run side-by-side with app.py on 5000
-    app.run(port=5001, debug=True)
+    app.run(port=5002, debug=True)
