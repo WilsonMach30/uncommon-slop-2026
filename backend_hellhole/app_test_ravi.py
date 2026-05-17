@@ -1,7 +1,9 @@
-import os
+import os, sys
 from dotenv import load_dotenv
 from openai import OpenAI
 
+sys.stdin.reconfigure(encoding="utf-8")
+sys.stdout.reconfigure(encoding="utf-8")
 load_dotenv()
 
 LANGUAGE_NATIVE = "English"
