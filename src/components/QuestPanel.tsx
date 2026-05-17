@@ -114,9 +114,11 @@ export default function QuestPanel({
     }
 
     setSubmitting(true);
+    let uploaded: { imageUrl: string } | null = null;
     try {
       const description = `[${location.name}] ${input.trim()}`;
-      await submitTrialImage(imageFile, description);
+      const result = await submitTrialImage(imageFile, description);
+      uploaded = { imageUrl: result.imageUrl };
       toast.success("Your trial has been recorded in the archives.");
     } catch (err) {
       console.error("[trial upload]", err);
@@ -126,7 +128,7 @@ export default function QuestPanel({
     }
     setSubmitting(false);
 
-    onStartTrack(chosen, input);
+    onStartTrack(chosen, input, { imageUrl: uploaded?.imageUrl, description: input.trim() });
     handleClose();
   };
 
