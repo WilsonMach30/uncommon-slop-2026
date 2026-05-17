@@ -230,9 +230,36 @@ function MapDashboard() {
           onClose={() => setActiveLocation(null)}
           profileId={profile.id}
           progress={progress}
-          onStartTrack={(track, input) => {
+          onStartTrack={async (track, input, meta) => {
             const loc = activeLocation ? LOCATIONS[activeLocation]?.name ?? activeLocation : "the tavern";
             setActiveLocation(null);
+
+            if (track === "reading") {
+              setReadingLoading({ location: loc });
+              try {
+                const res = await fetch("/api/reading-pack", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    language: profile.language,
+                    level: profile.exploration_level,
+                    interests: profile.interests.join(", "),
+                    description: meta?.description ?? input,
+                    image_url: meta?.imageUrl ?? null,
+                  }),
+                });
+                const data = await res.json();
+                if (!res.ok || !data?.pack) throw new Error(data?.error ?? "Failed to generate reading");
+                sessionStorage.setItem("reading_pack", JSON.stringify(data.pack));
+              } catch (err) {
+                console.error("[reading-pack]", err);
+                toast.error("The scrolls would not yield. Try again, wanderer.");
+                setReadingLoading(null);
+                return;
+              }
+              setReadingLoading(null);
+            }
+
             navigate({
               to: "/quest",
               search: {
