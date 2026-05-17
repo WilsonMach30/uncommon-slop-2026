@@ -18,8 +18,8 @@ async function transcribe(audio: Blob, apiKey: string): Promise<string> {
 }
 
 async function chat(userText: string, location: string, language: string): Promise<string> {
-  const key = process.env.WAFER_API_KEY;
-  if (!key) throw new Error("WAFER_API_KEY is not configured");
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) throw new Error("LOVABLE_API_KEY is not configured");
 
   const systemPrompt = `You are an in-character innkeeper in a fantasy tavern in "${location}".
 You are helping the traveler practice their ${language || "target language"} through natural conversation.
@@ -28,14 +28,14 @@ You are helping the traveler practice their ${language || "target language"} thr
 - Gently correct or model better phrasing if their speech has obvious mistakes, but keep it conversational.
 - Always end with a small question that invites them to keep speaking.`;
 
-  const res = await fetch("https://pass.wafer.ai/v1/chat/completions", {
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({
-      model: "Qwen3.5-397B-A17B",
+      model: "google/gemini-3-flash-preview",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userText || "(the traveler said nothing intelligible)" },
