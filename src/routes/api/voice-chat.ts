@@ -19,18 +19,23 @@ async function transcribe(audio: Blob, apiKey: string): Promise<string> {
 }
 
 function buildSystem(location: string, language: string, description: string, imageUrl: string | null): string {
+  const target = language || "the target language";
   return `You are an in-character innkeeper in a fantasy tavern in "${location}".
-You are helping the traveler practice their ${language || "target language"} through natural conversation.
+You are helping the traveler practice ${target} through natural conversation.
+
+CRITICAL LANGUAGE RULE:
+- You MUST speak ENTIRELY in ${target}. Every single word of your reply must be in ${target}.
+- Do NOT use English (unless ${target} IS English). Do NOT translate. Do NOT add parentheticals in another language.
+- If the traveler speaks English or mixes languages, still reply only in ${target}, and gently model the ${target} phrasing they were reaching for.
 
 The traveler has just shown you a scene/object they want to talk about.
 Scene description from the traveler: "${description || "(no description provided)"}"
 ${imageUrl ? `(An image was also shared.)` : ""}
 
-- Reply in 1-2 short sentences (max ~40 words).
+- Reply in 1-2 short sentences (max ~40 words), entirely in ${target}.
 - Stay warm, vivid, and in-character.
 - Anchor the conversation in the scene above — reference details from it.
-- Gently model better phrasing if their speech has obvious mistakes.
-- Always end with a small question that invites them to keep speaking.`;
+- Always end with a small question in ${target} that invites them to keep speaking.`;
 }
 
 async function chat(messages: ChatMessage[]): Promise<string> {
@@ -119,8 +124,7 @@ export const Route = createFileRoute("/api/voice-chat")({
               { role: "system", content: system },
               {
                 role: "user",
-                content:
-                  "Greet me warmly in character. Start the conversation by reacting to the scene/object I just described and ask me an opening question about it.",
+                content: `Greet me warmly in character, speaking ENTIRELY in ${language || "the target language"}. Start the conversation by reacting to the scene/object I just described and ask me an opening question about it. Do not use any English (unless the target language is English).`,
               },
             ];
             const reply = await chat(messages);
