@@ -484,6 +484,18 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
         </div>
       )}
 
+      {/* === Reading Trial Results === */}
+      {readingOutcome && (
+        <ReadingResultsScreen
+          outcome={readingOutcome}
+          onClose={() => {
+            setReadingOutcome(null);
+            sessionStorage.removeItem("reading_pack");
+            onExit?.();
+          }}
+        />
+      )}
+
       {/* === Lockout / Tavern Cooldown — fire & embers === */}
       {isLockedOut && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 overflow-hidden">
