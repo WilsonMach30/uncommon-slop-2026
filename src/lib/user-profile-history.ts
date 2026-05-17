@@ -40,7 +40,7 @@ function passionLabelsFromIds(ids: string[]): string {
     .join(", ");
 }
 
-function getStoredRowId(): number | null {
+export function getProfileHistoryRowId(): number | null {
   if (typeof window === "undefined") return null;
   const raw = localStorage.getItem(HISTORY_ROW_KEY);
   if (!raw) return null;
@@ -62,9 +62,12 @@ async function upsertProfileHistory(
     passion: string;
     level: number;
     interests: string;
+    image_url: string;
+    description: string;
   }>,
-) {
-  const rowId = getStoredRowId();
+  options?: { silent?: boolean },
+): Promise<number | null> {
+  const rowId = getProfileHistoryRowId();
 
   if (rowId != null) {
     const { data, error } = await trialSupabase
@@ -74,15 +77,15 @@ async function upsertProfileHistory(
       .select("id");
 
     if (error) {
-      reportError("update", error);
+      if (!options?.silent) reportError("update", error);
       if (error.code === "42501") clearStoredRowId();
-      return;
+      return null;
     }
 
     if (!data?.length) {
       clearStoredRowId();
     } else {
-      return;
+      return rowId;
     }
   }
 
@@ -102,11 +105,37 @@ async function upsertProfileHistory(
     .single();
 
   if (error) {
-    reportError("insert", error);
-    return;
+    if (!options?.silent) reportError("insert", error);
+    return null;
   }
 
-  if (data?.id != null) setStoredRowId(data.id);
+  if (data?.id != null) {
+    setStoredRowId(data.id);
+    return data.id;
+  }
+
+  return null;
+}
+
+/** Returns the user_profile_history row id, creating a default row if needed. */
+export async function ensureProfileHistoryRowId(): Promise<number> {
+  const existing = getProfileHistoryRowId();
+  if (existing != null) return existing;
+
+  const id = await upsertProfileHistory(
+    {
+      target_language: languageLabel("es"),
+      passion: "",
+      level: 1,
+    },
+    { silent: true },
+  );
+
+  if (id != null) return id;
+
+  throw new Error(
+    "No user_profile_history row found. Complete Chapter I onboarding or enable trial DB policies.",
+  );
 }
 
 export async function saveTargetLanguage(languageCode: string) {

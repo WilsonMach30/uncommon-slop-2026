@@ -15,6 +15,8 @@ export type TrialUserProfileHistoryRow = {
   level: number;
   interests: string | null;
   common_mistakes: string | null;
+  image_url: string | null;
+  description: string | null;
 };
 
 function createTrialSupabaseClient(): SupabaseClient {

@@ -1,13 +1,7 @@
 import { trialSupabase } from "@/integrations/supabase/trial-client";
+import { ensureProfileHistoryRowId } from "@/lib/user-profile-history";
 
 const BUCKET = "images";
-
-function uniqueId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-}
 
 function fileExtension(file: File): string {
   const fromName = file.name.split(".").pop()?.toLowerCase();
@@ -18,25 +12,31 @@ function fileExtension(file: File): string {
 }
 
 export async function submitTrialImage(file: File, description: string) {
-  const storagePath = `${uniqueId()}.${fileExtension(file)}`;
+  const profileHistoryId = await ensureProfileHistoryRowId();
+  const ext = fileExtension(file);
+  const storagePath = `${profileHistoryId}.${ext}`;
 
   const { error: uploadError } = await trialSupabase.storage
     .from(BUCKET)
     .upload(storagePath, file, {
       contentType: file.type || "image/jpeg",
-      upsert: false,
+      upsert: true,
     });
 
   if (uploadError) throw uploadError;
 
   const { data: urlData } = trialSupabase.storage.from(BUCKET).getPublicUrl(storagePath);
+  const imageUrl = urlData.publicUrl;
 
-  const { error: insertError } = await trialSupabase.from("images").insert({
-    image_url: urlData.publicUrl,
-    description: description.trim(),
-  });
+  const { error: updateError } = await trialSupabase
+    .from("user_profile_history")
+    .update({
+      image_url: imageUrl,
+      description: description.trim(),
+    })
+    .eq("id", profileHistoryId);
 
-  if (insertError) throw insertError;
+  if (updateError) throw updateError;
 
-  return { imageUrl: urlData.publicUrl, storagePath };
+  return { id: profileHistoryId, imageUrl, storagePath };
 }

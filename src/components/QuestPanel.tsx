@@ -51,13 +51,21 @@ export default function QuestPanel({
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isBrasserie = location.name === "The Brasserie";
-
   useEffect(() => {
     // trigger enter animation
     const t = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(t);
   }, []);
+
+  useEffect(() => {
+    setInput("");
+    setChosen(null);
+    setImageFile(null);
+    setImagePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }, [location.name]);
 
   useEffect(() => {
     return () => {
@@ -96,34 +104,31 @@ export default function QuestPanel({
   const launch = async () => {
     if (!chosen || submitting) return;
 
-    if (isBrasserie) {
-      if (!imageFile) {
-        toast.error("Upload an image to begin your Brasserie trial.");
-        return;
-      }
-      if (!input.trim()) {
-        toast.error("Describe your image in the field below.");
-        return;
-      }
-
-      setSubmitting(true);
-      try {
-        await submitTrialImage(imageFile, input);
-        toast.success("Your trial has been recorded in the archives.");
-      } catch (err) {
-        console.error("[Brasserie trial]", err);
-        toast.error("Could not save your trial. Check your connection and try again.");
-        setSubmitting(false);
-        return;
-      }
-      setSubmitting(false);
+    if (!imageFile) {
+      toast.error("Upload an image to begin your trial.");
+      return;
     }
+    if (!input.trim()) {
+      toast.error("Describe your image in the field below.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const description = `[${location.name}] ${input.trim()}`;
+      await submitTrialImage(imageFile, description);
+      toast.success("Your trial has been recorded in the archives.");
+    } catch (err) {
+      console.error("[trial upload]", err);
+      toast.error("Could not save your trial. Check your connection and try again.");
+      setSubmitting(false);
+      return;
+    }
+    setSubmitting(false);
 
     onStartTrack(chosen, input);
     handleClose();
   };
-
-  const Icon = location.icon;
 
   return (
     <div
@@ -148,50 +153,42 @@ export default function QuestPanel({
           >
             <X className="w-4 h-4" />
           </button>
-          {isBrasserie ? (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={(e) => {
-                  handleImagePick(e.target.files?.[0]);
-                  e.target.value = "";
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="group mx-auto mb-3 block"
-                aria-label="Upload an image for your trial"
-              >
-                <div className="relative w-24 h-24 rounded-xl overflow-hidden border-2 border-primary bg-primary-container glow-emerald transition-transform group-hover:scale-105">
-                  {imagePreview ? (
-                    <img
-                      src={imagePreview}
-                      alt="Your trial image"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-primary">
-                      <ImagePlus className="w-7 h-7" />
-                      <span className="font-mono-label text-[8px] uppercase tracking-wider">
-                        Add image
-                      </span>
-                    </div>
-                  )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={(e) => {
+              handleImagePick(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="group mx-auto mb-3 block"
+            aria-label="Upload an image for your trial"
+          >
+            <div className="relative w-24 h-24 rounded-xl overflow-hidden border-2 border-primary bg-primary-container glow-emerald transition-transform group-hover:scale-105">
+              {imagePreview ? (
+                <img
+                  src={imagePreview}
+                  alt="Your trial image"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-primary">
+                  <ImagePlus className="w-7 h-7" />
+                  <span className="font-mono-label text-[8px] uppercase tracking-wider">
+                    Add image
+                  </span>
                 </div>
-              </button>
-              <p className="font-mono-label text-[9px] uppercase tracking-[0.25em] text-muted-foreground mb-2">
-                Tap above to upload your scene
-              </p>
-            </>
-          ) : (
-            <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-primary-container border-2 border-primary flex items-center justify-center text-primary glow-emerald">
-              <Icon className="w-6 h-6" />
+              )}
             </div>
-          )}
+          </button>
+          <p className="font-mono-label text-[9px] uppercase tracking-[0.25em] text-muted-foreground mb-2">
+            Tap above to upload your scene
+          </p>
           <p className="font-mono-label text-[10px] uppercase tracking-[0.4em] text-tertiary mb-1">
             {location.subtitle}
           </p>
@@ -208,16 +205,12 @@ export default function QuestPanel({
         <div className="px-6 py-6 space-y-5">
           <div>
             <label className="font-mono-label text-[10px] uppercase tracking-[0.3em] text-tertiary block mb-2">
-              {isBrasserie ? "⟢ Describe your image" : "⟢ What will you explore?"}
+              ⟢ Describe your image
             </label>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={
-                isBrasserie
-                  ? "Describe what is happening in your image…"
-                  : "e.g. Ordering coffee, ancient swords…"
-              }
+              placeholder="Describe what is happening in your image…"
               className="w-full bg-surface-low border-2 border-bark focus:border-tertiary outline-none rounded-md p-3 text-sm font-mono-label min-h-[70px] text-cream placeholder:text-muted-foreground/60 shadow-carved"
             />
           </div>
