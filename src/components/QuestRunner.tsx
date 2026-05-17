@@ -622,10 +622,14 @@ function SpeakingMicBar({
   disabled,
   location = "the tavern",
   language,
+  onTurn,
+  onFeedbackReady,
 }: {
   disabled?: boolean;
   location?: string;
   language?: string;
+  onTurn?: (turnIndex: number) => void;
+  onFeedbackReady?: (feedback: SpeakingFeedback) => void;
 }) {
   const [recording, setRecording] = useState(false);
   const [responding, setResponding] = useState(false);
@@ -633,29 +637,75 @@ function SpeakingMicBar({
   const [reply, setReply] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [turns, setTurns] = useState<{ user: string; assistant: string }[]>([]);
-  const [feedback, setFeedback] = useState<SpeakingFeedback | null>(null);
-  const [generatingFeedback, setGeneratingFeedback] = useState(false);
+  const [openingLoaded, setOpeningLoaded] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const sceneRef = useRef<{ description: string; image_url: string | null }>({ description: "", image_url: null });
+  const openingFiredRef = useRef(false);
+  const feedbackFiredRef = useRef(false);
+  const turnsRef = useRef(turns);
+  useEffect(() => { turnsRef.current = turns; }, [turns]);
 
-  const endSession = async () => {
-    setGeneratingFeedback(true);
-    setErrorMsg("");
+  // Load scene context + fetch opening greeting on mount.
+  useEffect(() => {
+    if (openingFiredRef.current) return;
+    openingFiredRef.current = true;
+    let description = "";
+    let image_url: string | null = null;
+    try {
+      const raw = sessionStorage.getItem("speaking_context");
+      if (raw) {
+        const parsed = JSON.parse(raw) as { description?: string; imageUrl?: string | null };
+        description = parsed.description ?? "";
+        image_url = parsed.imageUrl ?? null;
+      }
+    } catch { /* empty */ }
+    sceneRef.current = { description, image_url };
+
+    (async () => {
+      setResponding(true);
+      try {
+        const res = await fetch("/api/voice-chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "opening", location, language, description, image_url }),
+        });
+        const data = (await res.json()) as { reply?: string; audio?: string; error?: string };
+        if (!res.ok) throw new Error(data.error || `Opening failed (${res.status})`);
+        const assistantText = data.reply ?? "";
+        setReply(assistantText);
+        setTurns([{ user: "", assistant: assistantText }]);
+        if (data.audio && audioRef.current) {
+          audioRef.current.src = `data:audio/mpeg;base64,${data.audio}`;
+          await audioRef.current.play().catch(() => {});
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Could not start the conversation";
+        setErrorMsg(msg);
+      } finally {
+        setResponding(false);
+        setOpeningLoaded(true);
+      }
+    })();
+  }, [location, language]);
+
+  const requestFeedback = async (allTurns: { user: string; assistant: string }[]) => {
+    if (feedbackFiredRef.current) return;
+    feedbackFiredRef.current = true;
     try {
       const res = await fetch("/api/voice-feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ turns, language, location }),
+        body: JSON.stringify({ turns: allTurns.filter((t) => t.user || t.assistant), language, location }),
       });
       const data = (await res.json()) as { feedback?: SpeakingFeedback; error?: string };
       if (!res.ok || !data.feedback) throw new Error(data.error || `Feedback failed (${res.status})`);
-      setFeedback(data.feedback);
+      onFeedbackReady?.(data.feedback);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Could not generate feedback";
       setErrorMsg(msg);
-    } finally {
-      setGeneratingFeedback(false);
+      feedbackFiredRef.current = false;
     }
   };
 
@@ -667,6 +717,16 @@ function SpeakingMicBar({
       form.append("audio", blob, "recording.webm");
       form.append("location", location);
       if (language) form.append("language", language);
+      form.append("description", sceneRef.current.description);
+      if (sceneRef.current.image_url) form.append("image_url", sceneRef.current.image_url);
+      // History as chat messages (skip empty user from opening).
+      const history = turnsRef.current.flatMap((t) => {
+        const arr: { role: "user" | "assistant"; content: string }[] = [];
+        if (t.user) arr.push({ role: "user", content: t.user });
+        if (t.assistant) arr.push({ role: "assistant", content: t.assistant });
+        return arr;
+      });
+      form.append("history", JSON.stringify(history));
 
       const res = await fetch("/api/voice-chat", { method: "POST", body: form });
       const data = (await res.json()) as {
@@ -681,11 +741,20 @@ function SpeakingMicBar({
       const assistantText = data.reply ?? "";
       setTranscript(userText);
       setReply(assistantText);
-      setTurns((t) => [...t, { user: userText, assistant: assistantText }]);
+      const nextTurns = [...turnsRef.current, { user: userText, assistant: assistantText }];
+      setTurns(nextTurns);
+
+      // Count only user-spoken turns toward the 3-turn limit.
+      const userTurnCount = nextTurns.filter((t) => t.user).length;
+      onTurn?.(userTurnCount);
 
       if (data.audio && audioRef.current) {
         audioRef.current.src = `data:audio/mpeg;base64,${data.audio}`;
         await audioRef.current.play().catch(() => {});
+      }
+
+      if (userTurnCount >= SPEAKING_TURNS) {
+        void requestFeedback(nextTurns);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Voice pipeline failed";
@@ -696,7 +765,7 @@ function SpeakingMicBar({
   };
 
   const startRecording = async () => {
-    if (disabled || recording || responding) return;
+    if (disabled || recording || responding || !openingLoaded) return;
     setErrorMsg("");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -742,10 +811,19 @@ function SpeakingMicBar({
     setRecording(false);
   };
 
-  const canEnd = turns.length > 0 && !recording && !responding;
+  const userTurnCount = turns.filter((t) => t.user).length;
+  const turnsLeft = Math.max(0, SPEAKING_TURNS - userTurnCount);
 
   return (
     <div className="flex flex-col gap-3">
+      <p className="font-mono-label text-[10px] uppercase tracking-widest text-tertiary text-center">
+        {openingLoaded
+          ? turnsLeft > 0
+            ? `⟢ ${turnsLeft} ${turnsLeft === 1 ? "reply" : "replies"} until victory ⟣`
+            : "⟢ Tale complete — fetching the innkeeper's report ⟣"
+          : "⟢ The innkeeper is gathering his thoughts… ⟣"}
+      </p>
+
       <button
         type="button"
         onMouseDown={startRecording}
@@ -753,7 +831,7 @@ function SpeakingMicBar({
         onMouseLeave={() => recording && stopRecording()}
         onTouchStart={startRecording}
         onTouchEnd={stopRecording}
-        disabled={disabled || responding}
+        disabled={disabled || responding || !openingLoaded || turnsLeft === 0}
         className={`group w-full flex items-center gap-3 px-3 py-3 rounded-md border-2 border-black shadow-hard transition-all select-none ${
           recording
             ? "bg-red-950/60 border-red-500"
@@ -798,7 +876,7 @@ function SpeakingMicBar({
         </div>
 
         <span className="shrink-0 font-mono-label text-[9px] uppercase tracking-[0.25em] text-tertiary min-w-[70px] text-right">
-          {responding ? "Thinking" : recording ? "Release" : "Hold · Speak"}
+          {responding ? "Thinking" : recording ? "Release" : turnsLeft === 0 ? "Done" : "Hold · Speak"}
         </span>
       </button>
 
@@ -815,36 +893,10 @@ function SpeakingMicBar({
         </div>
       )}
 
-      <button
-        onClick={endSession}
-        disabled={!canEnd || generatingFeedback}
-        className="w-full px-4 py-2 rounded border-2 border-[#f7be1d]/60 bg-[#20201a] text-[#f7be1d] font-mono-label text-[10px] uppercase tracking-widest hover:bg-[#2a2a1a] transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
-      >
-        {generatingFeedback ? (
-          <>
-            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Scoring your performance…
-          </>
-        ) : (
-          <>⟢ End Session &amp; See Feedback ⟣</>
-        )}
-      </button>
-
       {errorMsg && (
         <p className="font-mono-label text-[10px] uppercase tracking-wider text-red-400 text-center">{errorMsg}</p>
       )}
       <audio ref={audioRef} hidden />
-
-      {feedback && (
-        <SpeakingFeedbackOverlay
-          feedback={feedback}
-          onClose={() => {
-            setFeedback(null);
-            setTurns([]);
-            setTranscript("");
-            setReply("");
-          }}
-        />
-      )}
     </div>
   );
 }
