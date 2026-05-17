@@ -119,7 +119,8 @@
 #     app.run(port=5000, debug=True)
 
 import os
-from flask import Flask, request, send_file, jsonify
+import base64
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -196,16 +197,14 @@ def handle_voice_interaction():
         # --- ORIGINAL API CALL (Commented out to save tokens) ---
         wafer_response = wafer_client.chat.completions.create(
             model="Qwen3.5-397B-A17B",
-            messages=LIVE_CONVERSATION_CONTEXT
+            messages=LIVE_CONVERSATION_CONTEXT,
+            max_tokens=120,
         )
         ai_reply_text = wafer_response.choices[0].message.content
-        
-        # --- REPLACEMENT MOCK READING (Accommodates all multi-script languages via utf-8) ---
-        # Make sure 'wafer_output.txt' exists in your folder with your dummy script text!
-        # with open("wafer_output.txt", "r", encoding="utf-8") as f:
-        #     ai_reply_text = f.read()
-            
-        print(f"📝 Loaded Script Response: '{ai_reply_text}'")
+        print(f"📝 Wafer raw content: {repr(ai_reply_text)}")
+        if not ai_reply_text or not ai_reply_text.strip():
+            return jsonify({"error": "LLM returned an empty response"}), 500
+        ai_reply_text = ai_reply_text.strip()
 
         # Append the assistant's reply text back to the context history array
         LIVE_CONVERSATION_CONTEXT.append({"role": "assistant", "content": ai_reply_text})
@@ -217,26 +216,24 @@ def handle_voice_interaction():
         audio_stream = elevenlabs_client.text_to_speech.convert(
             text=ai_reply_text,
             voice_id="JBFqnCBsd6RMkjVDRZzb",  # George
-            model_id="eleven_v3",
+            model_id="eleven_turbo_v2_5",
             output_format="mp3_44100_128",
         )
 
-        # Write output stream bytes out to a response audio file
-        temp_output_path = "live_ai_response.mp3"
-        with open(temp_output_path, "wb") as f:
-            for chunk in audio_stream:
-                if chunk:
-                    f.write(chunk)
+        audio_bytes = b"".join(chunk for chunk in audio_stream if chunk)
 
         # -------------------------------------------------------------
-        # STEP 5: CLEANUP AND DISPATCH AUDIO TO FRONTEND
+        # STEP 5: CLEANUP AND DISPATCH JSON TO FRONTEND
         # -------------------------------------------------------------
-        # Clean up the local user input recording file safely
         if os.path.exists(temp_input_path):
             os.remove(temp_input_path)
 
-        print("✅ Pipeline complete! Shipping mp3 binary back to front-end.")
-        return send_file(temp_output_path, mimetype="audio/mp3")
+        print("✅ Pipeline complete! Shipping JSON response back to front-end.")
+        return jsonify({
+            "transcript": user_transcribed_text,
+            "reply": ai_reply_text,
+            "audio": base64.b64encode(audio_bytes).decode("utf-8"),
+        })
 
     except Exception as e:
         print(f"❌ Critical Pipeline Failure: {str(e)}")

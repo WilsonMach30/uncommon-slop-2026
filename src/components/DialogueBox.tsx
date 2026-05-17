@@ -63,11 +63,10 @@ export default function DialogueBox({
         setResponding(true);
         try {
           const res = await fetch("http://127.0.0.1:5000/respond-to-voice", { method: "POST", body: form });
-          if (!res.ok) throw new Error(await res.text());
-          const audioBlob = await res.blob();
-          const url = URL.createObjectURL(audioBlob);
-          if (responseAudioRef.current) {
-            responseAudioRef.current.src = url;
+          const data = (await res.json()) as { audio?: string; error?: string };
+          if (!res.ok) throw new Error(data.error || await res.text());
+          if (data.audio && responseAudioRef.current) {
+            responseAudioRef.current.src = `data:audio/mpeg;base64,${data.audio}`;
             responseAudioRef.current.play();
           }
         } catch (err) {

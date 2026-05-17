@@ -492,25 +492,30 @@ function SpeakingMicBar({ disabled, location = "the tavern" }: { disabled?: bool
   const sendAudio = async (blob: Blob) => {
     setResponding(true);
     setErrorMsg("");
+    console.log("[voice] sending audio blob", { size: blob.size, type: blob.type });
     try {
       const form = new FormData();
       form.append("audio", blob, "recording.webm");
-      form.append("location", location);
 
-      const res = await fetch("/api/voice-chat", { method: "POST", body: form });
+      console.log("[voice] POST http://127.0.0.1:5000/respond-to-voice");
+      const res = await fetch("http://127.0.0.1:5000/respond-to-voice", { method: "POST", body: form });
+      console.log("[voice] response status", res.status);
       const data = (await res.json()) as { transcript?: string; reply?: string; audio?: string; error?: string };
       if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
 
+      console.log("[voice] transcript:", data.transcript);
+      console.log("[voice] reply:", data.reply);
+      console.log("[voice] audio bytes (base64 length):", data.audio?.length ?? 0);
       setTranscript(data.transcript ?? "");
       setReply(data.reply ?? "");
 
       if (data.audio && audioRef.current) {
         audioRef.current.src = `data:audio/mpeg;base64,${data.audio}`;
-        await audioRef.current.play().catch(() => { /* ignore autoplay errors */ });
+        await audioRef.current.play().catch((e) => console.warn("[voice] autoplay blocked:", e));
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Voice pipeline failed";
-      console.error("Voice pipeline error:", err);
+      console.error("[voice] pipeline error:", err);
       setErrorMsg(msg);
     } finally {
       setResponding(false);
