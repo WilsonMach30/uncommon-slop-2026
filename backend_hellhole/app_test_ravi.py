@@ -5,8 +5,8 @@ from openai import OpenAI
 load_dotenv()
 
 LANGUAGE_NATIVE = "English"
-LANGUAGE_TARGET = "Spanish"
-LEVEL = "INTERMEDIATE" #INTERMEDIATE ADVANCED
+LANGUAGE_TARGET = "Arabic"
+LEVEL = "ADVANCED" #INTERMEDIATE ADVANCED
 PAST_CONVO = [] #will be in database at some point
 CONVO_HISTORY = []
 
@@ -84,7 +84,7 @@ def glm_input(directive, user_input=""):
         extra_body={"enable_thinking": False},
     )
     msg = response.choices[0].message
-    print(msg)
+    # print(msg)
     reply = msg.content
     if not reply or not reply.strip():
         raise ValueError("GLM returned an empty response")
@@ -97,7 +97,7 @@ def main():
     user_entry = input("USER ENTRY: ")
     print("QWEN START")
     qwen_out = qwen_directive(user_entry)
-    print(qwen_out)
+    # print(qwen_out)
     while True:
         if NUM > 1:
             decision = input("You have completed the requirements for this conversation! Exit? [Y/N]: ")
