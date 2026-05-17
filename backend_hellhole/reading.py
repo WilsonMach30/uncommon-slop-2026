@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 from openai import OpenAI
+import json
 
 # Load API credentials from environment
 load_dotenv()
@@ -92,7 +93,16 @@ def handle_reading_generation():
         # --- REPLACEMENT MOCK FILE PARSING (Accommodates multi-script languages via utf-8) ---
         # with open("reading_output.txt", "r", encoding="utf-8") as f:
         #     generated_data = f.read()
+        try:
+            parsed_json = json.loads(generated_data)
+            if "multiple_choice" in parsed_json:
+                for mcq in parsed_json["multiple_choice"]:
+                    if "correct_answer" in mcq and "answer" not in mcq:
+                        mcq["answer"] = mcq["correct_answer"]
+            generated_data = parsed_json
 
+        except Exception:
+            pass
         print("✅ Structured reading packet generated successfully.")
         
         # Returns the raw text/JSON blueprint block to the frontend UI
