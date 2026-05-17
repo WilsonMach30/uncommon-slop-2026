@@ -78,7 +78,7 @@ User Profile & History:
 {user_profile_history}
 
 Output exactly these four sections:
-1. What the image shows.
+1. What the image shows. 
 2. 3 vocabulary words to practise (drawn from the image).
 3. A primary grammatical focus based on the user's known weak points.
 4. An engaging opening question in {LANGUAGE} to start the conversation.

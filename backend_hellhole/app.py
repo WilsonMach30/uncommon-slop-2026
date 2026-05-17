@@ -148,8 +148,8 @@ elevenlabs_client = ElevenLabs(
 # This list tracks the chat history so the AI has continuous memory of the dialogue
 LIVE_CONVERSATION_CONTEXT = [
     {
-        "role": "system", 
-        "content": "You are an empathetic, conversational language teacher. Keep the conversation engaging, fluid, and natural."
+        "role": "system",
+        "content": "You are an empathetic, conversational language teacher. Keep the conversation engaging, fluid, and natural. Reply in 1-2 short sentences only — never more."
     }
 ]
 
@@ -198,7 +198,7 @@ def handle_voice_interaction():
         wafer_response = wafer_client.chat.completions.create(
             model="Qwen3.5-397B-A17B",
             messages=LIVE_CONVERSATION_CONTEXT,
-            max_tokens=120,
+            max_tokens=1024,
         )
         ai_reply_text = wafer_response.choices[0].message.content
         print(f"📝 Wafer raw content: {repr(ai_reply_text)}")
