@@ -6,13 +6,16 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from elevenlabs.client import ElevenLabs
 
-load_dotenv()
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 app = Flask(__name__)
 CORS(app)
 
+_el_key = os.getenv("ELEVENLABS_API_KEY", "")
+print(f"[startup] ELEVENLABS_API_KEY = ...{_el_key[-8:] if _el_key else 'NOT SET'}")
+
 wafer_client      = OpenAI(base_url="https://pass.wafer.ai/v1", api_key=os.getenv("WAFER_API_KEY"))
-elevenlabs_client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
+elevenlabs_client = ElevenLabs(api_key=_el_key)
 
 GLM_MODEL  = "GLM-5.1"
 QWEN_MODEL = "Qwen3.5-397B-A17B"
@@ -79,14 +82,13 @@ def qwen_speak(user_text: str) -> str:
     level_rules = load_level(LEVEL)
 
     system = (
-        f"You are a bilingual friend of a student. The student's native language is {LANGUAGE_NATIVE}. "
-        f"The student is trying to learn {LANGUAGE_TARGET}. Like a real conversation with a friend, "
-        f"keep exchanges short and natural. Speak to the student in {LANGUAGE_TARGET} so they can practise.\n\n"
+        f"You are a bilingual friend helping a student practice {LANGUAGE_TARGET}. "
+        f"The student's native language is {LANGUAGE_NATIVE}.\n\n"
         f"CONVERSATION LEVEL: {LEVEL}\nINSTRUCTIONS: {level_rules}\n\n"
-        "This is the general topic/plan for the conversation. Respond to the student's message, "
-        "keeping the conversation on topic. Do not write long paragraphs — talk like a friend.\n\n"
         f"CONVERSATION TOPIC/PLAN:\n{session_directive}\n\n"
-        f"PAST EXCHANGES THIS SESSION:\n{chr(10).join(CONVO_HISTORY) if CONVO_HISTORY else 'None yet.'}"
+        f"PAST EXCHANGES THIS SESSION:\n{chr(10).join(CONVO_HISTORY) if CONVO_HISTORY else 'None yet.'}\n\n"
+        f"RULE: You MUST reply ONLY in {LANGUAGE_TARGET}. Never use {LANGUAGE_NATIVE}. "
+        "Keep your reply to 1-2 short sentences like a casual friend would say."
     )
 
     oai_history.append({"role": "user", "content": user_text})
