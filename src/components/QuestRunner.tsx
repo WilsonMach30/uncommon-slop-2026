@@ -527,7 +527,13 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
         />
       )}
 
-      {/* === Lockout / Tavern Cooldown — fire & embers === */}
+      {showSpeakingFeedback && speakingFeedback && (
+        <SpeakingFeedbackOverlay
+          feedback={speakingFeedback}
+          onClose={() => setShowSpeakingFeedback(false)}
+        />
+      )}
+
       {isLockedOut && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 overflow-hidden">
           {/* dark blurred backdrop */}
