@@ -304,9 +304,12 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
               disabled={isLockedOut || victory}
               onCorrect={onCorrect}
               onWrong={onWrong}
+              onComplete={(outcome) => {
+                setReadingOutcome(outcome);
+                if (outcome.victory) setVictory(true);
+              }}
+              livesRemaining={lives}
               language={language}
-              level={level}
-              interests={interests}
             />
           ) : (
             <div className="grid gap-3">
