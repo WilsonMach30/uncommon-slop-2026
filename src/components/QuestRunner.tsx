@@ -25,6 +25,8 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
   const [proficiencyScore, setProficiencyScore] = useState<number | null>(null);
   const victoryAwardedRef = useRef(false);
   const [readingOutcome, setReadingOutcome] = useState<ReadingOutcome | null>(null);
+  const [speakingFeedback, setSpeakingFeedback] = useState<SpeakingFeedback | null>(null);
+  const [showSpeakingFeedback, setShowSpeakingFeedback] = useState(false);
 
   // Lockout trigger
   useEffect(() => {
