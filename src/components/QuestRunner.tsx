@@ -573,90 +573,85 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
   );
 }
 
-function SpeakingMicBar({ disabled, location = "the tavern" }: { disabled?: boolean; location?: string }) {
+type SpeakingFeedback = {
+  score: number;
+  summary: string;
+  strengths: string[];
+  improvements: string[];
+  model_phrasings: { learner_said: string; better: string; why: string }[];
+};
+
+function SpeakingMicBar({
+  disabled,
+  location = "the tavern",
+  language,
+}: {
+  disabled?: boolean;
+  location?: string;
+  language?: string;
+}) {
   const [recording, setRecording] = useState(false);
   const [responding, setResponding] = useState(false);
-  const [sessionReady, setSessionReady] = useState(false);
-  const [canExit, setCanExit] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [reply, setReply] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [turns, setTurns] = useState<{ user: string; assistant: string }[]>([]);
+  const [feedback, setFeedback] = useState<SpeakingFeedback | null>(null);
+  const [generatingFeedback, setGeneratingFeedback] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Start session on mount
-  useEffect(() => {
-    setSessionReady(false);
-    setErrorMsg("");
-    console.log("[voice] starting session for topic:", location);
-    fetch("http://127.0.0.1:5001/start-session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic: location, language_native: "English", language_target: "Spanish", level: "BEGINNER" }),
-    })
-      .then((r) => r.json())
-      .then((data: { reply?: string; audio?: string; error?: string }) => {
-        if (data.error) throw new Error(data.error);
-        console.log("[voice] session started, opening:", data.reply);
-        setReply(data.reply ?? "");
-        if (data.audio && audioRef.current) {
-          audioRef.current.src = `data:audio/mpeg;base64,${data.audio}`;
-          audioRef.current.play().catch((e) => console.warn("[voice] autoplay blocked:", e));
-        }
-        setSessionReady(true);
-      })
-      .catch((e) => {
-        console.error("[voice] start-session error:", e);
-        setErrorMsg("Could not start session. Is app2.py running on port 5001?");
-      });
-
-    return () => {
-      fetch("http://127.0.0.1:5001/end-session", { method: "POST" }).catch(() => {});
-    };
-  }, [location]);
-
   const endSession = async () => {
+    setGeneratingFeedback(true);
+    setErrorMsg("");
     try {
-      const res = await fetch("http://127.0.0.1:5001/end-session", { method: "POST" });
-      const data = await res.json() as { summary?: string };
-      console.log("[voice] session summary:", data.summary);
-      setReply(data.summary ?? "Session ended.");
-      setCanExit(false);
-      setSessionReady(false);
-    } catch (e) {
-      console.error("[voice] end-session error:", e);
+      const res = await fetch("/api/voice-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ turns, language, location }),
+      });
+      const data = (await res.json()) as { feedback?: SpeakingFeedback; error?: string };
+      if (!res.ok || !data.feedback) throw new Error(data.error || `Feedback failed (${res.status})`);
+      setFeedback(data.feedback);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not generate feedback";
+      setErrorMsg(msg);
+    } finally {
+      setGeneratingFeedback(false);
     }
   };
 
   const sendAudio = async (blob: Blob) => {
     setResponding(true);
     setErrorMsg("");
-    console.log("[voice] sending audio blob", { size: blob.size, type: blob.type });
     try {
       const form = new FormData();
       form.append("audio", blob, "recording.webm");
+      form.append("location", location);
+      if (language) form.append("language", language);
 
-      console.log("[voice] POST http://127.0.0.1:5001/respond-to-voice");
-      const res = await fetch("http://127.0.0.1:5001/respond-to-voice", { method: "POST", body: form });
-      console.log("[voice] response status", res.status);
-      const data = (await res.json()) as { transcript?: string; reply?: string; audio?: string; turn?: number; can_exit?: boolean; error?: string };
+      const res = await fetch("/api/voice-chat", { method: "POST", body: form });
+      const data = (await res.json()) as {
+        transcript?: string;
+        reply?: string;
+        audio?: string;
+        error?: string;
+      };
       if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
 
-      console.log("[voice] transcript:", data.transcript);
-      console.log("[voice] reply:", data.reply);
-      console.log("[voice] turn:", data.turn, "can_exit:", data.can_exit);
-      setTranscript(data.transcript ?? "");
-      setReply(data.reply ?? "");
-      setCanExit(data.can_exit ?? false);
+      const userText = data.transcript ?? "";
+      const assistantText = data.reply ?? "";
+      setTranscript(userText);
+      setReply(assistantText);
+      setTurns((t) => [...t, { user: userText, assistant: assistantText }]);
 
       if (data.audio && audioRef.current) {
         audioRef.current.src = `data:audio/mpeg;base64,${data.audio}`;
-        await audioRef.current.play().catch((e) => console.warn("[voice] autoplay blocked:", e));
+        await audioRef.current.play().catch(() => {});
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Voice pipeline failed";
-      console.error("[voice] pipeline error:", err);
       setErrorMsg(msg);
     } finally {
       setResponding(false);
@@ -678,7 +673,9 @@ function SpeakingMicBar({ disabled, location = "the tavern" }: { disabled?: bool
 
       const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       chunksRef.current = [];
-      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
       mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunksRef.current, { type: mimeType || "audio/webm" });
@@ -693,10 +690,10 @@ function SpeakingMicBar({ disabled, location = "the tavern" }: { disabled?: bool
       setRecording(true);
     } catch (err) {
       const name = (err as { name?: string })?.name;
-      if (name === "NotAllowedError") setErrorMsg("Microphone permission denied. Enable it in your browser settings.");
+      if (name === "NotAllowedError")
+        setErrorMsg("Microphone permission denied. Enable it in your browser settings.");
       else if (name === "NotFoundError") setErrorMsg("No microphone was found.");
       else setErrorMsg("Could not access the microphone.");
-      console.error("Microphone error:", err);
     }
   };
 
@@ -708,14 +705,10 @@ function SpeakingMicBar({ disabled, location = "the tavern" }: { disabled?: bool
     setRecording(false);
   };
 
+  const canEnd = turns.length > 0 && !recording && !responding;
+
   return (
     <div className="flex flex-col gap-3">
-      {!sessionReady && !errorMsg && (
-        <div className="flex items-center justify-center gap-2 py-4 text-tertiary">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span className="font-mono-label text-[10px] uppercase tracking-widest">Starting session…</span>
-        </div>
-      )}
       <button
         type="button"
         onMouseDown={startRecording}
@@ -723,7 +716,7 @@ function SpeakingMicBar({ disabled, location = "the tavern" }: { disabled?: bool
         onMouseLeave={() => recording && stopRecording()}
         onTouchStart={startRecording}
         onTouchEnd={stopRecording}
-        disabled={disabled || responding || !sessionReady}
+        disabled={disabled || responding}
         className={`group w-full flex items-center gap-3 px-3 py-3 rounded-md border-2 border-black shadow-hard transition-all select-none ${
           recording
             ? "bg-red-950/60 border-red-500"
@@ -784,18 +777,122 @@ function SpeakingMicBar({ disabled, location = "the tavern" }: { disabled?: bool
           <p className="font-serif text-sm text-cream">{reply}</p>
         </div>
       )}
-      {canExit && (
-        <button
-          onClick={endSession}
-          className="w-full px-4 py-2 rounded border-2 border-[#f7be1d]/60 bg-[#20201a] text-[#f7be1d] font-mono-label text-[10px] uppercase tracking-widest hover:bg-[#2a2a1a] transition-colors"
-        >
-          ⟢ End Session &amp; Get Summary ⟣
-        </button>
-      )}
+
+      <button
+        onClick={endSession}
+        disabled={!canEnd || generatingFeedback}
+        className="w-full px-4 py-2 rounded border-2 border-[#f7be1d]/60 bg-[#20201a] text-[#f7be1d] font-mono-label text-[10px] uppercase tracking-widest hover:bg-[#2a2a1a] transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+      >
+        {generatingFeedback ? (
+          <>
+            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Scoring your performance…
+          </>
+        ) : (
+          <>⟢ End Session &amp; See Feedback ⟣</>
+        )}
+      </button>
+
       {errorMsg && (
         <p className="font-mono-label text-[10px] uppercase tracking-wider text-red-400 text-center">{errorMsg}</p>
       )}
       <audio ref={audioRef} hidden />
+
+      {feedback && (
+        <SpeakingFeedbackOverlay
+          feedback={feedback}
+          onClose={() => {
+            setFeedback(null);
+            setTurns([]);
+            setTranscript("");
+            setReply("");
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function SpeakingFeedbackOverlay({
+  feedback,
+  onClose,
+}: {
+  feedback: SpeakingFeedback;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-[fade-in_0.3s_ease-out]">
+      <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-[#20201a] border-2 border-[#f7be1d] shadow-[0_0_40px_rgba(247,190,29,0.4)] rounded-md p-6">
+        <p className="font-mono-label text-[10px] uppercase tracking-[0.4em] text-tertiary text-center">
+          ⟢ Tavern Report ⟣
+        </p>
+        <div className="flex items-center justify-center gap-3 mt-3">
+          <Trophy className="w-7 h-7 text-[#f7be1d]" />
+          <span className="font-serif text-5xl text-[#f7be1d] tabular-nums">{feedback.score}</span>
+          <span className="font-mono-label text-xs text-tertiary uppercase tracking-widest">/ 100</span>
+        </div>
+
+        {feedback.summary && (
+          <p className="font-serif text-sm text-cream/90 mt-4 text-center italic">{feedback.summary}</p>
+        )}
+
+        {feedback.strengths.length > 0 && (
+          <div className="mt-5">
+            <p className="font-mono-label text-[10px] uppercase tracking-widest text-green-300 mb-2 flex items-center gap-1.5">
+              <Check className="w-3.5 h-3.5" /> Strengths
+            </p>
+            <ul className="space-y-1.5">
+              {feedback.strengths.map((s, i) => (
+                <li key={i} className="font-serif text-sm text-cream/90 pl-3 border-l-2 border-green-500/40">
+                  {s}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {feedback.improvements.length > 0 && (
+          <div className="mt-5">
+            <p className="font-mono-label text-[10px] uppercase tracking-widest text-[#f7be1d] mb-2 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" /> Areas to improve
+            </p>
+            <ul className="space-y-1.5">
+              {feedback.improvements.map((s, i) => (
+                <li key={i} className="font-serif text-sm text-cream/90 pl-3 border-l-2 border-[#f7be1d]/40">
+                  {s}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {feedback.model_phrasings.length > 0 && (
+          <div className="mt-5">
+            <p className="font-mono-label text-[10px] uppercase tracking-widest text-tertiary mb-2">
+              Model phrasings
+            </p>
+            <div className="space-y-2">
+              {feedback.model_phrasings.map((p, i) => (
+                <div key={i} className="rounded border-2 border-black bg-[#1a1a14] p-3 text-sm">
+                  {p.learner_said && (
+                    <p className="font-serif text-cream/70 italic">You said: "{p.learner_said}"</p>
+                  )}
+                  {p.better && (
+                    <p className="font-serif text-[#f7be1d] mt-1">Better: "{p.better}"</p>
+                  )}
+                  {p.why && <p className="font-serif text-cream/80 mt-1 text-xs">{p.why}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={onClose}
+          className="mt-6 w-full px-4 py-2.5 rounded border-2 border-black bg-[#f7be1d] text-[#1a0800] font-bold text-sm uppercase tracking-wider shadow-hard hover:-translate-y-0.5 transition-transform"
+        >
+          Close
+        </button>
+      </div>
     </div>
   );
 }
