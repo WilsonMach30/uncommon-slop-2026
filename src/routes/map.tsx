@@ -234,6 +234,16 @@ function MapDashboard() {
             const loc = activeLocation ? LOCATIONS[activeLocation]?.name ?? activeLocation : "the tavern";
             setActiveLocation(null);
 
+            if (track === "speaking") {
+              sessionStorage.setItem(
+                "speaking_context",
+                JSON.stringify({
+                  description: meta?.description ?? input ?? "",
+                  imageUrl: meta?.imageUrl ?? null,
+                }),
+              );
+            }
+
             if (track === "reading") {
               setReadingLoading({ location: loc });
               try {
