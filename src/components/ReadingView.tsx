@@ -1,12 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 type MCQ = { question: string; options: string[]; answer: number };
-type ReadingData = { reading_text: string; multiple_choice: MCQ[]; short_answer: string[] };
+type SAQ = string | { question: string; answer?: string };
+type ReadingData = { reading_text: string; multiple_choice: MCQ[]; short_answer: SAQ[] };
+
+function saqQuestion(q: SAQ): string {
+  return typeof q === "string" ? q : q.question;
+}
 
 export default function ReadingView({
   level = 1,
-  language = "Arabic",
+  language = "French",
   interests = "Daily life, technology, history",
   onCorrect,
   onWrong,
@@ -43,36 +48,43 @@ export default function ReadingView({
   //     .catch((e) => setError(e.message ?? "Failed to load reading"))
   //     .finally(() => setLoading(false));
   // }, [level, language, interests]);
+  // Capture props at mount — reading is generated once per quest session.
+  const mountProps = useRef({ level, language, interests });
+
   useEffect(() => {
+    const { level: l, language: lang, interests: int } = mountProps.current;
+    const controller = new AbortController();
     setLoading(true);
     setError("");
     fetch("http://127.0.0.1:5002/generate-reading", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ level, language, interests }),
+      body: JSON.stringify({ level: l, language: lang, interests: int }),
+      signal: controller.signal,
     })
       .then((r) => r.json())
       .then((res) => {
         if (res.error) throw new Error(res.error);
-        
-        // Extract the nested structured data returned from your endpoint wrapper
         let readingPayload = res.data;
-        
-        // If the backend sent back a serialized text string block, convert it back to an object
         if (typeof readingPayload === "string") {
-            readingPayload = JSON.parse(readingPayload);
+          readingPayload = JSON.parse(readingPayload);
         }
-        
         setData(readingPayload);
+        setLoading(false);
       })
-      .catch((e) => setError(e.message ?? "Failed to load reading"))
-      .finally(() => setLoading(false));
-  }, [level, language, interests]);
+      .catch((e) => {
+        if (e.name === "AbortError") return; // cleanup abort — don't touch loading state
+        setError(e.message ?? "Failed to load reading");
+        setLoading(false);
+      });
+    return () => controller.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const checkAnswers = () => {
     if (!data) return;
     let correct = 0;
-    data.multiple_choice.forEach((q, i) => {
+    (data.multiple_choice ?? []).forEach((q, i) => {
       if (selected[i] === q.answer) correct++;
     });
     setRevealed(true);
@@ -104,7 +116,7 @@ export default function ReadingView({
       {/* Multiple choice */}
       <div className="flex flex-col gap-4">
         <p className="font-mono-label text-[9px] uppercase tracking-widest text-tertiary">Multiple Choice</p>
-        {data.multiple_choice.map((q, qi) => (
+        {(data.multiple_choice ?? []).map((q, qi) => (
           <div key={qi} className="flex flex-col gap-2">
             <p className="font-serif text-sm text-cream">{qi + 1}. {q.question}</p>
             <div className="grid gap-2">
@@ -137,9 +149,9 @@ export default function ReadingView({
       {/* Short answer */}
       <div className="flex flex-col gap-4">
         <p className="font-mono-label text-[9px] uppercase tracking-widest text-tertiary">Short Answer</p>
-        {data.short_answer.map((q, qi) => (
+        {(data.short_answer ?? []).map((q, qi) => (
           <div key={qi} className="flex flex-col gap-2">
-            <p className="font-serif text-sm text-cream">{q}</p>
+            <p className="font-serif text-sm text-cream">{saqQuestion(q)}</p>
             <textarea
               disabled={disabled}
               value={shortAnswers[qi] ?? ""}
@@ -155,7 +167,7 @@ export default function ReadingView({
       {!revealed && (
         <button
           onClick={checkAnswers}
-          disabled={disabled || Object.keys(selected).length < data.multiple_choice.length}
+          disabled={disabled || Object.keys(selected).length < (data.multiple_choice?.length ?? 0)}
           className="px-6 py-2.5 rounded border-2 border-black bg-[#f7be1d] text-[#1a0800] font-bold text-xs uppercase tracking-wider shadow-hard hover:-translate-y-0.5 transition-transform disabled:opacity-40"
         >
           Submit Answers

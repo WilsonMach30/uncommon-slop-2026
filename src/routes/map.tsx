@@ -232,7 +232,16 @@ function MapDashboard() {
           onStartTrack={(track, input) => {
             const loc = activeLocation ? LOCATIONS[activeLocation]?.name ?? activeLocation : "the tavern";
             setActiveLocation(null);
-            navigate({ to: "/quest", search: { track, location: loc } });
+            navigate({
+              to: "/quest",
+              search: {
+                track,
+                location: loc,
+                language: profile.language,
+                level: profile.exploration_level,
+                interests: profile.interests.join(", "),
+              },
+            });
             void input;
           }}
         />

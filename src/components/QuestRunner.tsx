@@ -5,7 +5,7 @@ import ReadingView from "@/components/ReadingView";
 const TOTAL_STEPS = 5;
 const LOCKOUT_SECONDS = 30;
 
-export default function QuestRunner({ onExit, track = "speaking", location = "the tavern" }: { onExit?: () => void; track?: string; location?: string }) {
+export default function QuestRunner({ onExit, track = "speaking", location = "the tavern", language, level, interests }: { onExit?: () => void; track?: string; location?: string; language?: string; level?: number; interests?: string }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [lives, setLives] = useState(3);
   const [isLockedOut, setIsLockedOut] = useState(false);
@@ -237,6 +237,9 @@ export default function QuestRunner({ onExit, track = "speaking", location = "th
               disabled={isLockedOut || victory}
               onCorrect={onCorrect}
               onWrong={onWrong}
+              language={language}
+              level={level}
+              interests={interests}
             />
           ) : (
             <div className="grid gap-3">

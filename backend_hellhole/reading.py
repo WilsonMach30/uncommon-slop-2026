@@ -43,7 +43,7 @@ def handle_reading_generation():
         # 1. Grab target settings from front-end payload body
         data = request.json or {}
         user_level_num = data.get('level', 1)  # Defaulting to 1 (Intermediate)
-        target_language = data.get('language', 'Arabic')
+        target_language = data.get('language', 'Spanish')
         user_interests = data.get('interests', 'Daily life, technology, history')
         
         # -------------------------------------------------------------
@@ -73,11 +73,13 @@ def handle_reading_generation():
         prompt = f"""
         Generate a reading compilation in {target_language} adjusted to a {level_name} level profile constraint setup.
         Topic interests: {user_interests}.
-        
+
+        IMPORTANT: Every part of the output — the reading passage, all questions, all answer options, and all short answer prompts — must be written entirely in {target_language}. Do not use English anywhere in the response.
+
         Structure requirements:
-        1. A reading passage ('reading_text') written completely in the target script.
-        2. Exactly 3 Multiple Choice Questions ('multiple_choice') testing comprehension. Each item should have a 'question', an array of options, and an 'answer' index.
-        3. Exactly 2 Short Answer Questions ('short_answer') requiring text comprehension synthesis.
+        1. A reading passage ('reading_text') written completely in {target_language}.
+        2. Exactly 3 Multiple Choice Questions ('multiple_choice') in {target_language} testing comprehension. Each item should have a 'question' in {target_language}, an array of 'options' in {target_language}, and an 'answer' index (integer).
+        3. Exactly 2 Short Answer Questions ('short_answer') in {target_language} requiring text comprehension synthesis.
         """
         
         wafer_response = wafer_client.chat.completions.create(
@@ -95,6 +97,13 @@ def handle_reading_generation():
         #     generated_data = f.read()
         try:
             parsed_json = json.loads(generated_data)
+            # Unwrap one level of nesting if the model wrapped the content in an outer key
+            if "multiple_choice" not in parsed_json:
+                for v in parsed_json.values():
+                    if isinstance(v, dict) and "multiple_choice" in v:
+                        parsed_json = v
+                        break
+            # Normalise answer key
             if "multiple_choice" in parsed_json:
                 for mcq in parsed_json["multiple_choice"]:
                     if "correct_answer" in mcq and "answer" not in mcq:
