@@ -19,67 +19,67 @@ QWEN_MODEL = "Qwen3.5-397B-A17B"
 with open(f"./prompts/{LEVEL}.txt") as f:
     level = f.read()
 
-qwen_context = (
+glm_context = (
     f"You are a conversational language teacher. Your student is currently learning {LANGUAGE_TARGET}."
     "Keep the conversation flowing. Make it sound natural and fluid."
 )
 
-glm_context = (
+qwen_context = (
     f"You are a bilingual friend of a student. The student's native language is {LANGUAGE_NATIVE}."
     f"The student is trying to learn {LANGUAGE_TARGET}. The student is telling you something notable about their life."
     f"Like how you want tell things to a friend in real life, you will be having a conversation with this student about their life."
     f"The only difference is, instead of friends conversing in their native tongue, you will be speaking to the student in {LANGUAGE_TARGET} so they can practice."
 )
 
-glm_init = (
+qwen_init = (
     f"Create a plan for the conversation based on the user's past conversational abilities also attached. You will not actually be carrying out the conversation, you just need to guide the person who will."
     f"CONVERSATION HISTORY: {str(PAST_CONVO)}"
 )
 
-qwen_init = (
+glm_init = (
     "This is the general topic/plan for the conversation below. Now, please initiate the conversation by asking about the topic, taking into account what has already been said in this conversation. Like a real conversation, it should not be a long paragraph. You are casually talking to another human."
     f"CONVERSATION LEVEL: {LEVEL}, INSTRUCTIONS: {level}"
 )
 
-def glm_directive(user_entry):
+def qwen_directive(user_entry):
     response = wafer_client.chat.completions.create(
         model=GLM_MODEL,
         max_tokens=4096,
         messages=[
-            {"role": "system", "content": glm_context},
-            {"role": "user",   "content": glm_init + f"\n USER INPUTTED TOPIC:{user_entry}"},
+            {"role": "system", "content": qwen_context},
+            {"role": "user",   "content": qwen_init + f"\n USER INPUTTED TOPIC:{user_entry}"},
         ],
     )
     directive = response.choices[0].message.content
     if not directive or not directive.strip():
-        raise ValueError("GLM returned an empty directive")
+        raise ValueError("QWEN returned an empty directive")
     directive = directive.strip()
     return directive
 
-def glm_summary():
+def qwen_summary():
     global CONVO_HISTORY
     response = wafer_client.chat.completions.create(
         model=GLM_MODEL,
         max_tokens=4096,
         messages=[
-            {"role": "system", "content": glm_context},
+            {"role": "system", "content": qwen_context},
             {"role": "user","content": f"This is how the conversation went: {CONVO_HISTORY}. Provide a summary of what the user did great, and what they can work on for next time. The comments you write here will also be read by you when you start the next session."},
         ],
     )
     summary = response.choices[0].message.content
     if not summary or not summary.strip():
-        raise ValueError("GLM returned an empty summary")
+        raise ValueError("QWEN returned an empty summary")
     summary = summary.strip()
     print(summary)
     PAST_CONVO.append(summary)
 
-def qwen_input(directive, user_input=""):
+def glm_input(directive, user_input=""):
     response = wafer_client.chat.completions.create(
         model=QWEN_MODEL,
         max_tokens=4096,
         messages=[
-            {"role": "system", "content": qwen_context},
-            {"role": "user", "content": qwen_init + f"\n CONVERSATION TOPIC: {directive} \n PAST EXCHANGES IN THIS SESSION: {str(CONVO_HISTORY)} \n USER RESPONSE: {user_input}"}
+            {"role": "system", "content": glm_context},
+            {"role": "user", "content": glm_init + f"\n CONVERSATION TOPIC: {directive} \n PAST EXCHANGES IN THIS SESSION: {str(CONVO_HISTORY)} \n USER RESPONSE: {user_input}"}
         ],
         extra_body={"enable_thinking": False},
     )
@@ -87,7 +87,7 @@ def qwen_input(directive, user_input=""):
     print(msg)
     reply = msg.content
     if not reply or not reply.strip():
-        raise ValueError("Qwen returned an empty response")
+        raise ValueError("GLM returned an empty response")
     reply = reply.strip()
     CONVO_HISTORY.append("[FRIEND] "+str(reply))
     return reply
@@ -96,16 +96,16 @@ def main():
     global NUM
     user_entry = input("USER ENTRY: ")
     print("GLM START")
-    glm_out = glm_directive(user_entry)
-    print(glm_out)
+    qwen_out = qwen_directive(user_entry)
+    print(qwen_out)
     while True:
         if NUM > 1:
             decision = input("You have completed the requirements for this conversation! Exit? [Y/N]: ")
             if decision.lower() == "y":
-                glm_summary()
+                qwen_summary()
                 break
         NUM += 1
-        conversation = qwen_input(glm_out, user_entry)
+        conversation = glm_input(qwen_out, user_entry)
         print(conversation)
         user_entry = input("USER ENTRY: ")
         CONVO_HISTORY.append("[USER] "+str(user_entry))
