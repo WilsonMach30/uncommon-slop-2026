@@ -13,6 +13,7 @@ import { Route as QuestRouteImport } from './routes/quest'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiVoiceChatRouteImport } from './routes/api/voice-chat'
+import { Route as ApiReadingPackRouteImport } from './routes/api/reading-pack'
 import { Route as ApiGenerateTurnRouteImport } from './routes/api/generate-turn'
 
 const QuestRoute = QuestRouteImport.update({
@@ -35,6 +36,11 @@ const ApiVoiceChatRoute = ApiVoiceChatRouteImport.update({
   path: '/api/voice-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiReadingPackRoute = ApiReadingPackRouteImport.update({
+  id: '/api/reading-pack',
+  path: '/api/reading-pack',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiGenerateTurnRoute = ApiGenerateTurnRouteImport.update({
   id: '/api/generate-turn',
   path: '/api/generate-turn',
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/map': typeof MapRoute
   '/quest': typeof QuestRoute
   '/api/generate-turn': typeof ApiGenerateTurnRoute
+  '/api/reading-pack': typeof ApiReadingPackRoute
   '/api/voice-chat': typeof ApiVoiceChatRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/map': typeof MapRoute
   '/quest': typeof QuestRoute
   '/api/generate-turn': typeof ApiGenerateTurnRoute
+  '/api/reading-pack': typeof ApiReadingPackRoute
   '/api/voice-chat': typeof ApiVoiceChatRoute
 }
 export interface FileRoutesById {
@@ -61,19 +69,33 @@ export interface FileRoutesById {
   '/map': typeof MapRoute
   '/quest': typeof QuestRoute
   '/api/generate-turn': typeof ApiGenerateTurnRoute
+  '/api/reading-pack': typeof ApiReadingPackRoute
   '/api/voice-chat': typeof ApiVoiceChatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/map' | '/quest' | '/api/generate-turn' | '/api/voice-chat'
+  fullPaths:
+    | '/'
+    | '/map'
+    | '/quest'
+    | '/api/generate-turn'
+    | '/api/reading-pack'
+    | '/api/voice-chat'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/map' | '/quest' | '/api/generate-turn' | '/api/voice-chat'
+  to:
+    | '/'
+    | '/map'
+    | '/quest'
+    | '/api/generate-turn'
+    | '/api/reading-pack'
+    | '/api/voice-chat'
   id:
     | '__root__'
     | '/'
     | '/map'
     | '/quest'
     | '/api/generate-turn'
+    | '/api/reading-pack'
     | '/api/voice-chat'
   fileRoutesById: FileRoutesById
 }
@@ -82,6 +104,7 @@ export interface RootRouteChildren {
   MapRoute: typeof MapRoute
   QuestRoute: typeof QuestRoute
   ApiGenerateTurnRoute: typeof ApiGenerateTurnRoute
+  ApiReadingPackRoute: typeof ApiReadingPackRoute
   ApiVoiceChatRoute: typeof ApiVoiceChatRoute
 }
 
@@ -115,6 +138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiVoiceChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/reading-pack': {
+      id: '/api/reading-pack'
+      path: '/api/reading-pack'
+      fullPath: '/api/reading-pack'
+      preLoaderRoute: typeof ApiReadingPackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/generate-turn': {
       id: '/api/generate-turn'
       path: '/api/generate-turn'
@@ -130,8 +160,19 @@ const rootRouteChildren: RootRouteChildren = {
   MapRoute: MapRoute,
   QuestRoute: QuestRoute,
   ApiGenerateTurnRoute: ApiGenerateTurnRoute,
+  ApiReadingPackRoute: ApiReadingPackRoute,
   ApiVoiceChatRoute: ApiVoiceChatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
