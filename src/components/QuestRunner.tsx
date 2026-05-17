@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Heart, Check, X, Trophy, ArrowLeft, Flame, Sparkles, Star, Mic, MicOff, Loader2, Coins, Shield } from "lucide-react";
 import { toast } from "sonner";
-import ReadingView from "@/components/ReadingView";
+import ReadingView, { ReadingResultsScreen, type ReadingOutcome } from "@/components/ReadingView";
 import {
   awardQuestRoundVictory,
   getStoredProfileId,
